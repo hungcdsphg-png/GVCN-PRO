@@ -47,21 +47,51 @@ function gradeGuide(grade) {
   return map[n] || 'Nội dung phải đúng mức tiểu học, ngắn gọn và phù hợp lứa tuổi.';
 }
 
-function buildQuizPrompt({ topic, count, grade, difficulty, homeroomClass }) {
-  return `Bạn là giáo viên chủ nhiệm tiểu học Việt Nam. Hãy tạo đúng ${count} câu hỏi trắc nghiệm cho ${grade}${homeroomClass ? `, lớp chủ nhiệm ${homeroomClass}` : ''}, chủ đề: "${topic}". Mức độ: ${difficulty}.
+function buildQuizPrompt({ subject, topic, teacherRequirement, count, grade, difficulty, homeroomClass, existingQuestions = [] }) {
+  const avoid = existingQuestions.length ? `\nKHÔNG lặp lại các câu đã có: ${existingQuestions.slice(0, 80).map(v => `"${v}"`).join('; ')}` : '';
+  return `Bạn là giáo viên chủ nhiệm tiểu học Việt Nam. Hãy tạo đúng ${count} câu hỏi trắc nghiệm.
+Khối lớp: ${grade}${homeroomClass ? `; lớp chủ nhiệm: ${homeroomClass}` : ''}
+Môn học: ${subject || 'Theo yêu cầu giáo viên'}
+Chủ đề: ${topic}
+Yêu cầu cụ thể của giáo viên: ${teacherRequirement || topic}
+Số lượng: ${count}; Độ khó: ${difficulty}.${avoid}
+
+YÊU CẦU CỦA GIÁO VIÊN LÀ ƯU TIÊN CAO NHẤT. Không tự thay đổi dạng bài, phạm vi kiến thức hoặc chủ đề. Nếu giáo viên đưa ví dụ/dạng mẫu thì phải giữ đúng dạng đó; không đổi phép tính thành bài toán có lời văn nếu không được yêu cầu. Nếu giáo viên giới hạn bảng nhân hoặc phạm vi, tuyệt đối không ra ngoài giới hạn.
 Hướng dẫn theo khối: ${gradeGuide(grade)}
 Trước khi xuất JSON, tự kiểm tra thầm từng câu:
-- đúng kiến thức, phù hợp khối lớp và chủ đề;
+- đúng môn, chủ đề, yêu cầu cụ thể và khối lớp;
 - đúng 4 lựa chọn, duy nhất 1 lựa chọn đúng;
 - các lựa chọn không trùng/đồng nghĩa gây nhiều đáp án đúng;
 - câu hỏi đủ dữ kiện, không mơ hồ, không đánh đố, không lặp;
+- với Toán: tự tính lại từng phép tính; correctIndex bắt buộc trỏ tới phương án có giá trị đúng;
 - dùng tiếng Việt tự nhiên, ngắn gọn, không đưa nội dung thời sự dễ thay đổi;
 - correctIndex là vị trí đáp án đúng từ 0 đến 3.
 Chỉ trả dữ liệu theo JSON Schema, không giải thích.`;
 }
 
-function strictNormalizeQuestions(value, count) {
+function normalizedText(value) {
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function arithmeticAnswer(text) {
+  const clean = String(text || '').replace(/,/g, '.');
+  const match = clean.match(/(-?\d+(?:\.\d+)?)\s*([×xX*+\-÷/:])\s*(-?\d+(?:\.\d+)?)/);
+  if (!match) return null;
+  const a = Number(match[1]), b = Number(match[3]);
+  if (match[2] === '+' ) return a + b;
+  if (match[2] === '-' ) return a - b;
+  if (/[×xX*]/.test(match[2])) return a * b;
+  return b === 0 ? null : a / b;
+}
+
+function optionNumber(value) {
+  const match = String(value || '').replace(/,/g, '.').match(/-?\d+(?:\.\d+)?/);
+  return match ? Number(match[0]) : null;
+}
+
+function strictNormalizeQuestions(value, count, params = {}) {
   if (!Array.isArray(value) || value.length !== count) throw Object.assign(new Error('AI chưa trả đủ số câu.'), { contentInvalid: true });
+  const seen = new Set((params.existingQuestions || []).map(normalizedText));
   return value.map((q, index) => {
     const text = String(q?.text || '').trim();
     if (text.length < 4) throw Object.assign(new Error(`Câu ${index + 1} quá ngắn.`), { contentInvalid: true });
@@ -72,8 +102,27 @@ function strictNormalizeQuestions(value, count) {
     if (unique.size !== 4) throw Object.assign(new Error(`Câu ${index + 1} có đáp án trùng.`), { contentInvalid: true });
     const correctIndex = Number(q?.correctIndex);
     if (!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex > 3) throw Object.assign(new Error(`Câu ${index + 1} thiếu đáp án đúng.`), { contentInvalid: true });
+    const key = normalizedText(text);
+    if (seen.has(key)) throw Object.assign(new Error(`Câu ${index + 1} bị trùng với câu khác hoặc thư viện.`), { contentInvalid: true });
+    seen.add(key);
+    const mathContext = /toan/i.test(normalizedText(params.subject)) || /(bang bao nhieu|tinh|ket qua)/i.test(normalizedText(text));
+    const expected = mathContext ? arithmeticAnswer(text) : null;
+    if (expected !== null) {
+      const numeric = options.map(optionNumber);
+      const correctMatches = numeric.filter(v => v !== null && Math.abs(v - expected) < 1e-9).length;
+      if (numeric[correctIndex] === null || Math.abs(numeric[correctIndex] - expected) >= 1e-9 || correctMatches !== 1) {
+        throw Object.assign(new Error(`Câu ${index + 1} có phép tính nhưng đáp án/correctIndex chưa chính xác.`), { contentInvalid: true });
+      }
+    }
     return { text, options, correctIndex };
   });
+}
+
+function extractJson(data) {
+  const raw = data?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '';
+  if (!raw) throw Object.assign(new Error('Gemini không trả về nội dung.'), { contentInvalid: true });
+  try { return JSON.parse(raw.replace(/```json/gi,'').replace(/```/g,'').trim()); }
+  catch { throw Object.assign(new Error('JSON từ Gemini không hợp lệ.'), { contentInvalid: true }); }
 }
 
 function thinkingLevelFor(model) {
@@ -132,7 +181,7 @@ async function generateWithFallback(apiKey, params) {
   const schema = buildQuizSchema(params.count);
   for (const model of MODEL_CANDIDATES) {
     try {
-      const data = await googleGenerate({ apiKey, model, body: {
+      const requestBody = {
         contents: [{ parts: [{ text: buildQuizPrompt(params) }] }],
         generationConfig: {
           responseMimeType: 'application/json',
@@ -140,14 +189,19 @@ async function generateWithFallback(apiKey, params) {
           maxOutputTokens: Math.max(1000, params.count * 240),
           thinkingConfig: { thinkingLevel: thinkingLevelFor(model) }
         }
-      }});
-      const raw = data?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '';
-      if (!raw) throw Object.assign(new Error('Gemini không trả về nội dung.'), { contentInvalid: true });
-      let parsed;
-      try { parsed = JSON.parse(raw.replace(/```json/gi,'').replace(/```/g,'').trim()); }
-      catch { throw Object.assign(new Error('JSON từ Gemini không hợp lệ.'), { contentInvalid: true }); }
-      const questions = strictNormalizeQuestions(parsed, params.count);
-      return { model, questions };
+      };
+      let data = await googleGenerate({ apiKey, model, body: requestBody });
+      let parsed = extractJson(data);
+      try {
+        return { model, questions: strictNormalizeQuestions(parsed, params.count, params) };
+      } catch (validationError) {
+        if (!validationError.contentInvalid) throw validationError;
+        requestBody.contents.push({ role: 'model', parts: [{ text: JSON.stringify(parsed) }] });
+        requestBody.contents.push({ role: 'user', parts: [{ text: `Kết quả trên không đạt kiểm tra: ${validationError.message} Hãy sửa toàn bộ danh sách, tự kiểm tra lại phép tính/chủ đề/yêu cầu giáo viên và trả đúng JSON Schema. Không giải thích.` }] });
+        data = await googleGenerate({ apiKey, model, body: requestBody });
+        parsed = extractJson(data);
+        return { model, questions: strictNormalizeQuestions(parsed, params.count, params) };
+      }
     } catch (err) {
       lastError = err;
       if (!shouldTryNextModel(err)) break;
@@ -178,7 +232,7 @@ function normalizeRegularEvaluationResult(obj) {
 }
 
 async function generateRegularEvaluation(apiKey, prompt) {
-  const system = `Bạn là trợ lý hỗ trợ giáo viên tiểu học Việt Nam viết nhận xét đánh giá thường xuyên học sinh. Mỗi nội dung dưới 250 ký tự; tuyệt đối không đưa tên riêng học sinh; dùng “Em”; nội dung tích cực, bám sát mức Tốt/Đạt/Cần cố gắng; nếu có KHDH thì lồng ghép phù hợp vào nhận xét môn học; không tự tạo mã nhận xét. Chỉ trả JSON.`;
+  const system = `Bạn là trợ lý hỗ trợ giáo viên tiểu học Việt Nam viết nhận xét đánh giá thường xuyên học sinh. Mỗi nội dung dưới 250 ký tự; tuyệt đối không đưa tên riêng học sinh; dùng “Em”; nội dung tích cực, bám sát mức Tốt/Đạt/Cần cố gắng. Nếu prompt có nhận xét và mức của tháng trước, phải thể hiện sự tiến bộ, duy trì hoặc nội dung cần tiếp tục rèn luyện nhưng không sao chép nguyên văn. Nếu có KHDH thì lồng ghép phù hợp vào nhận xét môn học; không tự tạo mã nhận xét. Chỉ trả JSON.`;
   let lastError;
   for (const model of MODEL_CANDIDATES) {
     try {
@@ -237,10 +291,13 @@ export default async function handler(req, res) {
     if (!topic) return res.status(400).json({ error: 'Vui lòng nhập môn học/chủ đề.' });
     const params = {
       topic,
+      subject: String(body.subject || '').trim(),
+      teacherRequirement: String(body.teacherRequirement || '').trim(),
       count: Math.max(1, Math.min(20, Number(body.count) || 5)),
       grade: String(body.grade || 'Tiểu học').trim(),
       difficulty: String(body.difficulty || 'Vừa').trim(),
-      homeroomClass: String(body.homeroomClass || '').trim()
+      homeroomClass: String(body.homeroomClass || '').trim(),
+      existingQuestions: Array.isArray(body.existingQuestions) ? body.existingQuestions.map(v => String(v || '').trim()).filter(Boolean).slice(0, 100) : []
     };
     const { model, questions } = await generateWithFallback(apiKey, params);
     return res.status(200).json({ ok: true, model, questions });
