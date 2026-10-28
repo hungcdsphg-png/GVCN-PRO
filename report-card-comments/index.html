@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Google AI Studio App</title>
+    <script>
+      // Firewall against libraries trying to override read-only window.fetch
+      (function() {
+        try {
+          var feat = window.fetch;
+          if (feat) {
+            Object.defineProperty(window, 'fetch', {
+              configurable: true,
+              enumerable: true,
+              get: function() { return feat; },
+              set: function(v) { 
+                console.warn('Prevented attempt to override window.fetch');
+              }
+            });
+          }
+        } catch (e) {
+          console.error('Failed to apply fetch firewall:', e);
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="./assets/index-BKJDf6o6.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-CTxYcJZV.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
+
