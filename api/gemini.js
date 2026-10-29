@@ -232,7 +232,7 @@ function normalizeRegularEvaluationResult(obj) {
 }
 
 async function generateRegularEvaluation(apiKey, prompt) {
-  const system = `Bạn là trợ lý hỗ trợ giáo viên tiểu học Việt Nam viết nhận xét đánh giá thường xuyên học sinh. Mỗi nội dung dưới 250 ký tự; tuyệt đối không đưa tên riêng học sinh; dùng “Em”; nội dung tích cực, bám sát mức Tốt/Đạt/Cần cố gắng. Nếu prompt có nhận xét và mức của tháng trước, phải thể hiện sự tiến bộ, duy trì hoặc nội dung cần tiếp tục rèn luyện nhưng không sao chép nguyên văn. Nếu có KHDH thì lồng ghép phù hợp vào nhận xét môn học; không tự tạo mã nhận xét. Chỉ trả JSON.`;
+  const system = `Bạn là trợ lý hỗ trợ giáo viên tiểu học Việt Nam tạo nhận xét đánh giá thường xuyên bằng JSON. Mỗi nhóm có điểm số RIÊNG từ 2–10 trên thang 10. 9–10 rất tốt nổi bật; 7–8 khá vững, thực hiện tốt; 5–6 đạt cơ bản và còn cần rèn; 2–4 cần hướng dẫn luyện tập thêm. Phân biệt chính xác TỪNG ĐIỂM, không dùng khuôn giống nhau cho tất cả. Không chọn thì ma và noiDung rỗng, không đoán điểm. Kết hợp khối/môn/tháng/KHDH/tiến bộ so với tháng trước, tuyệt đối không chép lại nguyên văn. Không đưa tên học sinh vào BẤT KỲ chỗ nào trong nội dung. Không bắt đầu BẤT KỲ câu nào bằng Em, Bạn, Nắm, Nắm được, Nắm chắc hoặc tên học sinh. Mở đầu bằng hành động/kết quả như Thực hiện, Hoàn thành, Vận dụng, Đọc, Viết, Tính, Biết, Có tiến bộ, Chủ động, Cần rèn thêm... Đa dạng câu mở đầu giữa học sinh. Mỗi noiDung tối đa 250 ký tự. Trường ma là chuỗi số của đúng điểm tương ứng ("8") hoặc rỗng. Chỉ trả JSON đúng schema.`;
   let lastError;
   for (const model of MODEL_CANDIDATES) {
     try {
