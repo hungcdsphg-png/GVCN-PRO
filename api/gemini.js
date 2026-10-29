@@ -227,19 +227,26 @@ function regularEvaluationSchema() {
 
 function normalizeRegularEvaluationResult(obj) {
   const short = (v,n) => String(v || '').slice(0,n);
-  const one = (v) => ({ ma:short(v?.ma,20), noiDung:short(v?.noiDung,250) });
+  const one = (v) => ({ ma:short(v?.ma,20), noiDung:short(v?.noiDung,700) });
   return { monHoc:one(obj?.monHoc), nangLucChung:one(obj?.nangLucChung), nangLucDacThu:one(obj?.nangLucDacThu), phamChat:one(obj?.phamChat) };
 }
 
 async function generateRegularEvaluation(apiKey, prompt) {
-  const system = `Bạn là trợ lý hỗ trợ giáo viên tiểu học Việt Nam tạo nhận xét đánh giá thường xuyên bằng JSON. Mỗi nhóm có điểm số RIÊNG từ 2–10 trên thang 10. 9–10 rất tốt nổi bật; 7–8 khá vững, thực hiện tốt; 5–6 đạt cơ bản và còn cần rèn; 2–4 cần hướng dẫn luyện tập thêm. Phân biệt chính xác TỪNG ĐIỂM, không dùng khuôn giống nhau cho tất cả. Không chọn thì ma và noiDung rỗng, không đoán điểm. Kết hợp khối/môn/tháng/KHDH/tiến bộ so với tháng trước, tuyệt đối không chép lại nguyên văn. Không đưa tên học sinh vào BẤT KỲ chỗ nào trong nội dung. Không bắt đầu BẤT KỲ câu nào bằng Em, Bạn, Nắm, Nắm được, Nắm chắc hoặc tên học sinh. Mở đầu bằng hành động/kết quả như Thực hiện, Hoàn thành, Vận dụng, Đọc, Viết, Tính, Biết, Có tiến bộ, Chủ động, Cần rèn thêm... Đa dạng câu mở đầu giữa học sinh. Mỗi noiDung tối đa 250 ký tự. Trường ma là chuỗi số của đúng điểm tương ứng ("8") hoặc rỗng. Chỉ trả JSON đúng schema.`;
+  const system = `Bạn là trợ lý hỗ trợ giáo viên tiểu học Việt Nam viết nhận xét đánh giá thường xuyên.
+- Bốn nhóm có BỐN ĐIỂM RIÊNG theo thang x/10, tuyệt đối không dùng điểm chung. 10 nổi bật hơn 9, 8 hơn 7, 6 hơn 5, 4 hơn 2. 9–10 thành thạo, chủ động; 7–8 tốt; 5–6 đạt cơ bản, cần rèn thêm; 2–4 bước đầu, khích lệ và hướng dẫn.
+- Ưu tiên TUYỆT ĐỐI chủ điểm, bài học, kiến thức và kỹ năng TRONG KHDH môn/tháng đang xét. Không bịa kiến thức, bài học hoặc thành tích ngoài KHDH. Nếu không có KHDH, diễn đạt thận trọng, tránh khẳng định kiến thức cụ thể. Với năng lực/phẩm chất chỉ mô tả biểu hiện phù hợp với hoạt động học tập, không sao chép nội dung của môn học.
+- Dùng nhận xét/điểm tháng trước nếu có để thể hiện tiến bộ hoặc tiếp tục rèn, không bịa tiến bộ.
+- Không mở đầu bằng: Em, Bạn, tên học sinh, Nắm, Nắm được, Nắm vững. Bắt đầu trực tiếp bằng kỹ năng/hành động. Không viết họ tên hoặc tên riêng của học sinh.
+- Không dùng nhãn môn học, môn Tiếng Việt, [tên môn] lớp/khối X, điểm x/10, mức điểm, KHDH, kế hoạch dạy học, theo dữ liệu được cung cấp trong câu trả lời. Không lộ mã kỹ thuật, tên tệp.
+- Không dùng từ yếu, kém, không biết, không có khả năng. Mỗi nội dung phải DƯỚI 250 ký tự, tự nhiên, cụ thể và đa dạng giữa học sinh.
+- Nhóm Không chọn trả noiDung rỗng; không tự suy diễn điểm. Chỉ JSON theo schema; trường ma để chuỗi rỗng (điểm do app lưu riêng).`;
   let lastError;
   for (const model of MODEL_CANDIDATES) {
     try {
       const data = await googleGenerate({ apiKey, model, body:{
         contents:[{parts:[{text:String(prompt || '')}]}],
         systemInstruction:{parts:[{text:system}]},
-        generationConfig:{ responseMimeType:'application/json', responseJsonSchema:regularEvaluationSchema(), maxOutputTokens:900, thinkingConfig:{thinkingLevel:thinkingLevelFor(model)} }
+        generationConfig:{ responseMimeType:'application/json', responseJsonSchema:regularEvaluationSchema(), maxOutputTokens:1300, thinkingConfig:{thinkingLevel:thinkingLevelFor(model)} }
       }});
       const raw = data?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('') || '';
       if (!raw) throw Object.assign(new Error('Gemini không trả về nhận xét.'), { contentInvalid:true });
