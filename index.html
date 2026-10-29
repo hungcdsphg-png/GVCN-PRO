@@ -1400,6 +1400,15 @@
         .regular-eval-history-months{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}.regular-eval-history-month{border:1px solid #cbd5e1;background:#fff;color:#64748b;border-radius:999px;padding:6px 11px;font-size:10px;font-weight:900}.regular-eval-history-month.active{background:#4f46e5;border-color:#4f46e5;color:#fff}
         .regular-eval-history-card{border:1px solid #e2e8f0;border-radius:14px;padding:12px;background:#fff}.regular-eval-history-meta{font-size:10px;font-weight:900;color:#475569;margin-bottom:8px}.regular-eval-history-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.regular-eval-history-item{padding:9px;border-radius:10px;background:#f8fafc;font-size:10px;line-height:1.45;color:#475569}.regular-eval-history-item b{display:block;color:#334155;margin-bottom:3px}
         .regular-eval-template-overlay{position:fixed;inset:0;z-index:230;background:rgba(15,23,42,.58);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:18px}.regular-eval-template-dialog{width:min(520px,100%);background:#fff;border-radius:24px;padding:22px;box-shadow:0 28px 80px rgba(15,23,42,.28);border:1px solid #e2e8f0}.regular-eval-template-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.regular-eval-template-title{font-size:17px;font-weight:1000;color:#1e293b}.regular-eval-template-subtitle{font-size:10px;line-height:1.5;color:#64748b;margin-top:5px}.regular-eval-template-close{width:34px;height:34px;border-radius:10px;background:#f1f5f9;color:#64748b;display:flex;align-items:center;justify-content:center;flex:none}.regular-eval-template-options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}.regular-eval-template-option{border:1px solid #cbd5e1;border-radius:16px;background:#fff;padding:15px;text-align:left;transition:.18s ease}.regular-eval-template-option:hover{border-color:#818cf8;background:#f5f3ff;transform:translateY(-1px)}.regular-eval-template-option:disabled{cursor:not-allowed;opacity:.5;transform:none;background:#f8fafc}.regular-eval-template-option i{font-size:22px;color:#4f46e5}.regular-eval-template-option b{display:block;font-size:12px;color:#334155;margin-top:8px}.regular-eval-template-option span{display:block;font-size:9px;line-height:1.45;color:#64748b;margin-top:4px}
+
+        .regular-eval-template-subjects{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;max-height:min(42vh,350px);overflow-y:auto;padding:5px 2px;margin-top:8px}
+        .regular-eval-template-subject,.regular-eval-template-all{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid #e2e8f0;border-radius:11px;background:#fff;font-size:12px;color:#334155;cursor:pointer}
+        .regular-eval-template-subject:hover{background:#f8faff;border-color:#a5b4fc}.regular-eval-template-all{margin-top:13px;background:#eff6ff;border-color:#bfdbfe;color:#1e40af}
+        .regular-eval-template-subject input,.regular-eval-template-all input,.regular-eval-template-mode input{accent-color:#4f46e5;flex:none}
+        .regular-eval-template-foot{margin-top:12px}.regular-eval-template-mode{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:#334155}.regular-eval-template-mode label{display:flex;gap:5px;align-items:center;cursor:pointer}
+        .regular-eval-template-hint{font-size:10px;color:#64748b;line-height:1.5;margin-top:10px}.regular-eval-template-buttons{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+        .regular-eval-import-notice{display:flex;align-items:center;gap:8px;margin:0 0 12px;padding:10px 12px;border:1px solid #fde68a;border-radius:12px;background:#fffbeb;color:#92400e;font-size:12px;font-weight:600}
+        @media(max-width:640px){.regular-eval-template-subjects{grid-template-columns:1fr;max-height:38vh}.regular-eval-template-dialog{padding:15px;max-height:94vh;overflow-y:auto}}
         .regular-eval-bulk-summary{margin:0 0 14px;border:1px solid #bbf7d0;border-radius:18px;background:#f0fdf4;padding:13px 15px;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 8px 22px rgba(21,128,61,.06)}
         .regular-eval-bulk-summary.warning{border-color:#fed7aa;background:#fff7ed}.regular-eval-bulk-summary-main{min-width:0}.regular-eval-bulk-summary-title{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:1000;color:#166534}.regular-eval-bulk-summary.warning .regular-eval-bulk-summary-title{color:#c2410c}.regular-eval-bulk-summary-detail{font-size:10px;line-height:1.45;color:#64748b;margin-top:4px;overflow-wrap:anywhere}.regular-eval-bulk-summary .regular-eval-btn{flex:none}
         @media(max-width:1050px){.regular-eval-filter-grid{grid-template-columns:repeat(2,minmax(150px,1fr));width:100%}.regular-eval-actions{width:100%}.regular-eval-btn{flex:1}.regular-eval-table-wrap{max-height:none;min-height:400px}}
@@ -2158,13 +2167,32 @@
             return explicitlyClassed ? mapped.filter(s=>!selected || s.className===selected) : mapped;
         }
         function regularEvalSubjectsForGrade(grade=regularEvalState().settings.grade){
-            const value=Number(grade);
-            return REGULAR_EVAL_SUBJECTS.filter(subject=>!Array.isArray(subject.grades)||subject.grades.includes(value));
+            const value=Number(grade),r=state.regularEvaluation||{},latest=r.lastExcelImport;
+            const contextKey=`${regularEvalSchoolYear()}|${String(r.settings?.className||'').trim()}`;
+            const imported=latest?.schoolYear===regularEvalSchoolYear()&&latest.className===String(r.settings?.className||'').trim()?latest.subjects||{}:{};
+            const everImported=r.importedSubjectsByClass?.[contextKey]||[];
+            // Môn đã nhập vẫn nằm trong danh sách lựa chọn kể cả khi file nhập LẦN SAU không chứa môn đó.
+            return REGULAR_EVAL_SUBJECTS.filter(subject=>!Array.isArray(subject.grades)||subject.grades.includes(value)||Object.prototype.hasOwnProperty.call(imported,subject.id)||everImported.includes(subject.id));
         }
         function regularEvalSubject(id=regularEvalState().settings.subjectId){ return REGULAR_EVAL_SUBJECTS.find(s=>s.id===id) || regularEvalSubjectsForGrade()[0] || REGULAR_EVAL_SUBJECTS[0]; }
+        // Chuẩn hóa riêng tên Sheet: hỗ trợ Đ/đ, dấu tiếng Việt, ký hiệu và chữ hoa/thường.
+        function regularEvalSheetKey(value){
+            return String(value??'').trim().replace(/[đĐ]/g,'d').normalize('NFD')
+                .replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+        }
+        function regularEvalTemplateSheetName(subject){
+            return ({tinhoc:'Tin học',congnghe:'Công nghệ',amnhac:'Nghệ thuật - Âm nhạc',mithuat:'Nghệ thuật - Mĩ thuật'})[subject.id]||subject.sheetName;
+        }
         function regularEvalSubjectFromSheetName(value){
-            const normalized=regularEvalNormalizeText(value);
-            return REGULAR_EVAL_SUBJECTS.find(subject=>[subject.sheetName,subject.name,...(subject.aliases||[])].some(name=>regularEvalNormalizeText(name)===normalized))||null;
+            const normalized=regularEvalSheetKey(value);
+            if(!normalized)return null;
+            return REGULAR_EVAL_SUBJECTS.find(subject=>[
+                subject.id,subject.sheetName,subject.name,regularEvalTemplateSheetName(subject),...(subject.aliases||[]),
+                ...(subject.id==='tinhoc'?['Tin học','TH-CN Tin học']:[]),
+                ...(subject.id==='congnghe'?['Công nghệ','TH-CN Công nghệ']:[]),
+                ...(subject.id==='amnhac'?['Âm nhạc','Nghệ thuật - Âm nhạc']:[]),
+                ...(subject.id==='mithuat'?['Mĩ thuật','Mỹ thuật','Nghệ thuật - Mĩ thuật','Nghệ thuật - Mỹ thuật']:[])
+            ].some(name=>regularEvalSheetKey(name)===normalized))||null;
         }
         function regularEvalKhdhKey(subjectId=regularEvalState().settings.subjectId, month=regularEvalState().settings.month){ const r=regularEvalState(); return `${regularEvalSchoolYear()}|${r.settings.grade}|${r.settings.className}|${subjectId}|${month}`; }
         function regularEvalGetEvaluation(studentId, month=regularEvalState().settings.month, subjectId=regularEvalState().settings.subjectId, schoolYear=regularEvalSchoolYear()) {
@@ -2455,94 +2483,226 @@ NGUYÊN TẮC BẮT BUỘC:
         function regularEvalExportHeaders(){const h=regularEvalTemplateHeaders();return {...h,row2:h.row2.map(value=>value.startsWith('Mã nhận xét')?'Mã nhận xét':value)};}
         function regularEvalTemplateHeaders(){return {row1:['STT','Mã định danh Bộ GD&ĐT','Họ và tên','Ngày sinh','Tháng','Môn học và hoạt động giáo dục','','Nhận xét năng lực chung','','Nhận xét năng lực đặc thù','','Nhận xét phẩm chất chủ yếu',''],row2:['','','','','','Mã nhận xét (Nhập điểm từ 2 đến 10)','Nội dung','Mã nhận xét (Nhập điểm từ 2 đến 10)','Nội dung','Mã nhận xét (Nhập điểm từ 2 đến 10)','Nội dung','Mã nhận xét (Nhập điểm từ 2 đến 10)','Nội dung']};}
         window.regularEvalCloseTemplateMenu=function(){document.getElementById('regular-eval-template-overlay')?.remove();};
+        window.regularEvalToggleAllTemplateSubjects=function(input){
+            document.querySelectorAll('#regular-eval-template-overlay [data-template-subject]').forEach(checkbox=>{checkbox.checked=!!input.checked;});
+        };
+        window.regularEvalSyncAllTemplateSubjects=function(){
+            const boxes=[...document.querySelectorAll('#regular-eval-template-overlay [data-template-subject]')];
+            const all=document.getElementById('regular-eval-template-all');
+            if(all){all.checked=boxes.length>0&&boxes.every(box=>box.checked);all.indeterminate=boxes.some(box=>box.checked)&&!all.checked;}
+        };
         window.regularEvalOpenTemplateMenu=function(){
             regularEvalCloseTemplateMenu();
-            const students=regularEvalStudents(),r=regularEvalState(),subject=regularEvalSubject();
+            const students=regularEvalStudents(),r=regularEvalState(),subjects=REGULAR_EVAL_SUBJECTS;
             const overlay=document.createElement('div');overlay.id='regular-eval-template-overlay';overlay.className='regular-eval-template-overlay';
             overlay.onclick=event=>{if(event.target===overlay)regularEvalCloseTemplateMenu();};
-            overlay.innerHTML=`<div class="regular-eval-template-dialog" role="dialog" aria-modal="true" aria-label="Chọn loại file mẫu Excel"><div class="regular-eval-template-head"><div><div class="regular-eval-template-title">Chọn cách tạo Mẫu Excel</div><div class="regular-eval-template-subtitle">${mfgEsc(r.settings.className)} · Tháng ${r.settings.month} · ${mfgEsc(subject.name)}<br>File mẫu chỉ gồm Mã định danh, Họ tên, Ngày sinh, Tháng và các cột đánh giá; không có Giới tính và Tổ.</div></div><button type="button" class="regular-eval-template-close" onclick="regularEvalCloseTemplateMenu()" aria-label="Đóng"><i class="ph-bold ph-x"></i></button></div><div class="regular-eval-template-options"><button type="button" class="regular-eval-template-option" onclick="regularEvalDownloadTemplate('current')" ${students.length?'':'disabled'}><i class="ph-fill ph-users-three"></i><b>Xuất theo lớp hiện tại</b><span>Điền sẵn ${students.length} học sinh đang có trong bảng và dữ liệu đánh giá đã lưu.</span></button><button type="button" class="regular-eval-template-option" onclick="regularEvalDownloadTemplate('blank')"><i class="ph-fill ph-file-plus"></i><b>Tải mẫu trống</b><span>Chỉ tạo tiêu đề cột để nhập một danh sách học sinh mới.</span></button></div></div>`;
+            const options=subjects.map(subject=>`<label class="regular-eval-template-subject"><input type="checkbox" data-template-subject value="${escapeHtmlAttr(subject.id)}" ${subject.id===r.settings.subjectId?'checked':''} onchange="regularEvalSyncAllTemplateSubjects()"><span>${mfgEsc(regularEvalTemplateSheetName(subject))}</span></label>`).join('');
+            overlay.innerHTML=`<div class="regular-eval-template-dialog" role="dialog" aria-modal="true" aria-label="Chọn môn để tải Mẫu Excel"><div class="regular-eval-template-head"><div><div class="regular-eval-template-title">Chọn môn cần tải Mẫu Excel</div><div class="regular-eval-template-subtitle">${mfgEsc(r.settings.className)} · Tháng ${r.settings.month}. Mỗi môn sẽ là một Sheet trong <b>cùng một file Excel</b>.</div></div><button type="button" class="regular-eval-template-close" onclick="regularEvalCloseTemplateMenu()" aria-label="Đóng"><i class="ph-bold ph-x"></i></button></div><label class="regular-eval-template-all"><input id="regular-eval-template-all" type="checkbox" onchange="regularEvalToggleAllTemplateSubjects(this)"><b>Chọn tất cả môn</b></label><div class="regular-eval-template-subjects">${options}</div><div class="regular-eval-template-foot"><div class="regular-eval-template-mode"><label><input type="radio" name="regular-eval-template-mode" value="current" ${students.length?'checked':''} ${students.length?'':'disabled'}> Điền sẵn ${students.length} học sinh hiện có</label><label><input type="radio" name="regular-eval-template-mode" value="blank" ${students.length?'':'checked'}> Mẫu trống (nhập danh sách mới)</label></div><div class="regular-eval-template-hint">Các cột Mã: nhập điểm nguyên 2–10. Ô trống không xóa dữ liệu cũ khi nhập lại. Không có cột Giới tính/Tổ.</div><div class="regular-eval-template-buttons"><button type="button" class="regular-eval-btn gray" onclick="regularEvalCloseTemplateMenu()">Hủy</button><button type="button" class="regular-eval-btn indigo" onclick="regularEvalDownloadTemplateSelected()"><i class="ph-bold ph-download-simple"></i> Tải Mẫu Excel</button></div></div></div>`;
             document.body.appendChild(overlay);
+            regularEvalSyncAllTemplateSubjects();
         };
-        window.regularEvalDownloadTemplate=async function(mode=''){
+        window.regularEvalDownloadTemplateSelected=function(){
+            const subjectIds=[...document.querySelectorAll('#regular-eval-template-overlay [data-template-subject]:checked')].map(input=>input.value);
+            if(!subjectIds.length)return showToast('Hãy chọn ít nhất một môn học.','error');
+            const mode=document.querySelector('#regular-eval-template-overlay input[name="regular-eval-template-mode"]:checked')?.value||'blank';
+            return regularEvalDownloadTemplate(mode,subjectIds);
+        };
+        window.regularEvalDownloadTemplate=async function(mode='',selectedIds){
             if(!mode)return regularEvalOpenTemplateMenu();
-            regularEvalCloseTemplateMenu();
+            const r=regularEvalState(),available=REGULAR_EVAL_SUBJECTS;
+            const ids=Array.isArray(selectedIds)?selectedIds:[r.settings.subjectId];
+            const subjects=available.filter(subject=>ids.includes(subject.id));
+            if(!subjects.length)return showToast('Hãy chọn ít nhất một môn học hợp lệ.','error');
+            const students=mode==='current'?regularEvalStudents():[];
+            if(mode==='current'&&!students.length)return showToast('Lớp chưa có học sinh. Hãy chọn “Mẫu trống”.','error');
             try{
-                const XLSX=await regularEvalEnsureXLSX(),wb=XLSX.utils.book_new(),h=regularEvalTemplateHeaders(),r=regularEvalState(),subject=regularEvalSubject(),students=mode==='current'?regularEvalStudents():[];
-                if(mode==='current'&&!students.length)return showToast('Bảng hiện không có học sinh để xuất. Hãy chọn “Tải mẫu trống”.','error');
-                const guide=[['Tên cột','Hướng dẫn','Bắt buộc'],['Mã định danh Bộ GD&ĐT','Ưu tiên dùng để đối chiếu, không tạo trùng','x'],['Họ và tên','Họ tên học sinh','x'],['Ngày sinh','dd/mm/yyyy',''],['Tháng',`Tháng đang chọn: ${r.settings.month}`,''],['Môn học',subject.name,''],['Các cột Mã','Nhập điểm từ 2 đến 10 (số nguyên); Không chọn = ô trống',''],['Quy ước','Điểm được lưu dạng số; không nhập Tốt / Đạt / Chưa đạt hoặc 8/10',''],['Các cột Nội dung','Ô trống không xóa dữ liệu cũ khi nhập lại','']];
-                const guideWs=XLSX.utils.aoa_to_sheet(guide);guideWs['!cols']=[{wch:24},{wch:64},{wch:12}];XLSX.utils.book_append_sheet(wb,guideWs,'Hướng dẫn');
-                const exportLevel=value=>{try{return normalizeEvaluationScore(value)??'';}catch{return '';}};
-                const dataRows=students.map((student,index)=>{const ev=regularEvalGetEvaluation(student.id,r.settings.month,subject.id);return [index+1,student.code||'',student.name||'',student.dob||'',String(r.settings.month),exportLevel(ev?.monHoc_ma),ev?.monHoc_noiDung||'',exportLevel(ev?.nlc_ma),ev?.nlc_noiDung||'',exportLevel(ev?.nldt_ma),ev?.nldt_noiDung||'',exportLevel(ev?.pc_ma),ev?.pc_noiDung||''];});
-                const ws=XLSX.utils.aoa_to_sheet([h.row1,h.row2,...dataRows]);ws['!cols']=[{wch:5},{wch:22},{wch:27},{wch:15},{wch:9},{wch:15},{wch:42},{wch:15},{wch:42},{wch:15},{wch:42},{wch:15},{wch:42}];
-                XLSX.utils.book_append_sheet(wb,ws,subject.sheetName.slice(0,31));
-                const safeClass=String(r.settings.className||'Lop').replace(/[\\/:*?"<>|]+/g,'_'),safeSubject=String(subject.name||'Mon').replace(/[\\/:*?"<>|]+/g,'_');
-                XLSX.writeFile(wb,mode==='current'?`Mau_Nhan_Xet_${safeClass}_Thang${r.settings.month}_${safeSubject}.xlsx`:`Mau_Trong_Nhan_Xet_Thang${r.settings.month}_${safeSubject}.xlsx`);
-                showToast(mode==='current'?`Đã tạo file mẫu với ${students.length} học sinh của lớp hiện tại.`:'Đã tạo file mẫu trống.','success');
-            }catch(e){console.error(e);showToast('Không tạo được file mẫu Excel.','error');}
+                const XLSX=await regularEvalEnsureXLSX(),wb=XLSX.utils.book_new(),h=regularEvalTemplateHeaders();
+                const exportScore=value=>{try{return normalizeEvaluationScore(value)??'';}catch{return '';}};
+                subjects.forEach(subject=>{
+                    const dataRows=students.map((student,index)=>{
+                        const ev=regularEvalGetEvaluation(student.id,r.settings.month,subject.id);
+                        return [index+1,student.code||'',student.name||'',student.dob||'',Number(r.settings.month),
+                            exportScore(ev?.monHoc_ma),ev?.monHoc_noiDung||'',exportScore(ev?.nlc_ma),ev?.nlc_noiDung||'',
+                            exportScore(ev?.nldt_ma),ev?.nldt_noiDung||'',exportScore(ev?.pc_ma),ev?.pc_noiDung||''];
+                    });
+                    const ws=XLSX.utils.aoa_to_sheet([h.row1,h.row2,...dataRows]);
+                    ws['!cols']=[{wch:6},{wch:24},{wch:28},{wch:16},{wch:10},{wch:20},{wch:45},{wch:20},{wch:45},{wch:20},{wch:45},{wch:20},{wch:45}];
+                    ws['!merges']=[...[0,1,2,3,4].map(c=>({s:{r:0,c},e:{r:1,c}})),...[5,7,9,11].map(c=>({s:{r:0,c},e:{r:0,c:c+1}}))];
+                    XLSX.utils.book_append_sheet(wb,ws,regularEvalTemplateSheetName(subject).slice(0,31));
+                });
+                const safeClass=(String(r.settings.className||'Lop').replace(/[đĐ]/g,'d').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9_-]/g,'').replace(/^lop/i,'Lop').slice(0,35)||'Lop');
+                const fileName=`Mau_DanhGiaThuongXuyen_${safeClass}.xlsx`;
+                XLSX.writeFile(wb,fileName);
+                regularEvalCloseTemplateMenu();
+                showToast(`Đã tạo một file Excel gồm ${subjects.length} Sheet môn học${mode==='current'?`, mỗi Sheet có ${students.length} học sinh`: ' (mẫu trống)'}.`,'success');
+            }catch(e){console.error(e);showToast(`Không tạo được Mẫu Excel: ${e?.message||e}`,'error');}
         };
-        window.regularEvalOpenImport = function(){document.getElementById('regular-eval-import-input')?.click();};
-        window.regularEvalHandleImport = async function(input){
-            const file=input?.files?.[0]; if(!file)return;
-            try{
-                regularEvalSetLoading('Đang phân tích và đối chiếu dữ liệu Excel…');
-                const XLSX=await regularEvalEnsureXLSX(), ab=await file.arrayBuffer(), wb=XLSX.read(ab,{type:'array'}), r=regularEvalState();
-                let importedMonth=r.settings.month, updated=0, added=0, profilesUpdated=0, dataFound=false;
-                const rosterKey=String(r.settings.className||'').trim(),usesWorkingRoster=Object.prototype.hasOwnProperty.call(r.rosterByClass,rosterKey),importedStudentIds=new Set();
-                const invalidLevels=[];
-                const valueAt=(row,index)=>index>=0?String(row[index]??'').trim():'';
-                const setFilled=(obj,key,value,limit)=>{const v=String(value??'').trim();if(v)obj[key]=limit?regularEvalLimit(v,limit):v;};
-                for(const sheetName of wb.SheetNames){
-                    const ns=regularEvalNormalizeText(sheetName); if(ns.includes('huongdan')||ns.includes('sotonghop'))continue;
-                    const ws=wb.Sheets[sheetName], data=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
-                    let start=-1,map={stt:0,code:1,name:2,dob:3,gender:-1,group:-1,role:-1,goal:-1,talent:-1,month:6,evStart:7};
-                    for(let row=0;row<Math.min(data.length,15);row++){
-                        const arr=data[row]||[], normalized=arr.map(regularEvalNormalizeText), c=normalized.findIndex(v=>v.includes('madinhdanh')), n=normalized.findIndex(v=>v.includes('hovaten')||v==='hoten');
-                        if(c!==-1||n!==-1){start=row+1;if(c!==-1)map.code=c;if(n!==-1)map.name=n;map.dob=normalized.findIndex(v=>v.includes('ngaysinh')||v.includes('namsinh'));map.gender=normalized.findIndex(v=>v.includes('gioitinh'));map.group=normalized.findIndex(v=>v==='to'||v.includes('tohoc'));map.role=normalized.findIndex(v=>v.includes('chucvu'));map.goal=normalized.findIndex(v=>v.includes('muctieu')||v.includes('danhhieu'));map.talent=normalized.findIndex(v=>v.includes('sotruong'));map.month=normalized.findIndex(v=>v.includes('thang'));map.stt=normalized.findIndex(v=>v==='stt');map.evStart=normalized.findIndex(v=>v.includes('monhocvahoatdonggiaoduc'));if(map.evStart<0)map.evStart=Math.max(map.stt,map.code,map.name,map.dob,map.gender,map.group,map.role,map.goal,map.talent,map.month)+1;if((data[row+1]||[]).some(v=>regularEvalNormalizeText(v).includes('manhanxet')))start=row+2;break;}
+        window.regularEvalOpenImport=function(){document.getElementById('regular-eval-import-input')?.click();};
+
+        // Xác định cột theo cả hai hàng tiêu đề thay vì mặc định vị trí; hỗ trợ mẫu 13/15 cột.
+        function regularEvalImportHeaderMap(data){
+            const fields=[
+                ['monHoc_ma','monHoc_noiDung',['monhocvahoatdonggiaoduc','monhocvahdgd','monhoc']],
+                ['nlc_ma','nlc_noiDung',['nhanxetnanglucchung','nanglucchung']],
+                ['nldt_ma','nldt_noiDung',['nhanxetnanglucdacthu','nanglucdacthu']],
+                ['pc_ma','pc_noiDung',['nhanxetphamchatchuyeu','phamchatchuyeu']]
+            ];
+            for(let i=0;i<Math.min(35,data.length);i++){
+                const top=(data[i]||[]).map(regularEvalSheetKey);
+                const find=(matcher)=>top.findIndex(matcher);
+                const code=find(v=>v.includes('madinhdanh')||v==='mabogddt'||v==='mahocsinh');
+                const name=find(v=>v==='hovaten'||v==='hoten'||v==='tenhocsinh');
+                if(code<0&&name<0)continue;
+                const bottom=(data[i+1]||[]).map(regularEvalSheetKey);
+                const hasSecond=bottom.filter(v=>v.startsWith('manhanxet')||v==='ma'||v==='noidung').length>=2;
+                const map={code,name,dob:find(v=>v.includes('ngaysinh')||v==='namsinh'),month:find(v=>v==='thang'||v==='thangdanhgia'),groups:{},start:i+(hasSecond?2:1)};
+                const anchor=Math.max(code,name,map.dob,map.month)+1;
+                fields.forEach(([level,text,aliases],groupIndex)=>{
+                    let col=top.findIndex(v=>aliases.some(a=>v===a||v.startsWith(a)));
+                    if(col<0){
+                        // Mẫu một hàng tiêu đề: "Môn học - Mã", "NLC - Mã"...
+                        col=top.findIndex(v=>aliases.some(a=>v.includes(a))&&v.includes('ma'));
                     }
-                    if(start<0)continue; dataFound=true;
-                    const subject=regularEvalSubjectFromSheetName(sheetName)||regularEvalSubject();
-                    for(let i=start;i<data.length;i++){
-                        const row=data[i]||[], code=valueAt(row,map.code), name=valueAt(row,map.name);
-                        if(!code&&!name)continue; if(/họ.*tên/i.test(name)||/mã định danh/i.test(code))continue;
-                        const rawDob=valueAt(row,map.dob), birthDate=normalizeStudentBirthDate(rawDob), dob=birthDate?formatStudentBirthDate(birthDate):(regularEvalExtractBirthYear(rawDob)||rawDob), codeKey=regularEvalNormalizeText(code), nameKey=regularEvalNormalizeText(name);
-                        const monthMatch=valueAt(row,map.month).match(/\d{1,2}/), parsedMonth=monthMatch?Number(monthMatch[0]):Number(r.settings.month), month=(parsedMonth>=1&&parsedMonth<=12)?parsedMonth:Number(r.settings.month);importedMonth=month;
-                        let student=(state.students||[]).find(s=>codeKey&&regularEvalNormalizeText(regularEvalStudentCode(s))===codeKey);
-                        if(!student&&nameKey){const matches=(state.students||[]).filter(s=>regularEvalNormalizeText(s.name)===nameKey);student=matches.find(s=>dob&&regularEvalNormalizeText(regularEvalStudentDob(s))===regularEvalNormalizeText(dob))||(matches.length===1?matches[0]:null);}
-                        if(!student){student={id:`stu-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,name:name||code,moetCode:code,birthDate,birthYear:birthDate?birthDate.slice(0,4):regularEvalExtractBirthYear(rawDob),dob,gender:valueAt(row,map.gender),group:valueAt(row,map.group),role:valueAt(row,map.role),goal:valueAt(row,map.goal),talent:valueAt(row,map.talent),className:r.settings.className||state.admin?.className||'',points:0,stars:0,history:[]};state.students.push(student);added++;}
-                        else{setFilled(student,'moetCode',code);setFilled(student,'name',name);if(birthDate){student.birthDate=birthDate;student.birthYear=birthDate.slice(0,4);student.dob=formatStudentBirthDate(birthDate);}else setFilled(student,'birthYear',regularEvalExtractBirthYear(rawDob));setFilled(student,'gender',valueAt(row,map.gender));setFilled(student,'group',valueAt(row,map.group));setFilled(student,'role',valueAt(row,map.role));setFilled(student,'goal',valueAt(row,map.goal));setFilled(student,'talent',valueAt(row,map.talent));profilesUpdated++;}
-                        importedStudentIds.add(String(student.id));
-                        const ev=regularEvalEnsureEvaluation(student.id,month,subject.id), b=map.evStart;
-                        const levelColumns=[['monHoc_ma',0,'Môn học và HĐGD'],['nlc_ma',2,'Năng lực chung'],['nldt_ma',4,'Năng lực đặc thù'],['pc_ma',6,'Phẩm chất chủ yếu']];
-                        levelColumns.forEach(([field,offset,label])=>{
-                            const raw=valueAt(row,b+offset);
-                            if(!raw)return;
-                            let normalized=null;
-                            try{normalized=normalizeEvaluationScore(raw);}catch(err){
-                                if(!ev.validationErrors)ev.validationErrors={};
-                                ev.validationErrors[field]={raw,sheet:sheetName,row:i+1};
-                                invalidLevels.push(`${sheetName} · dòng ${i+1} · ${name||code||'Chưa rõ học sinh'} · ${label}: “${raw}”`);
-                                return;
+                    if(col<0 && hasSecond){
+                        const groupStart=bottom.findIndex((v,j)=>j>=anchor&&groupIndex===0&&(v==='ma'||v.startsWith('manhanxet')));
+                        if(groupIndex===0 && groupStart>=0)col=groupStart;
+                    }
+                    if(col<0)col=anchor+groupIndex*2;
+                    map.groups[level]=col;
+                    map.groups[text]=col+1;
+                });
+                return map;
+            }
+            return null;
+        }
+        function regularEvalImportDate(value){
+            const text=String(value??'').trim(),birthDate=normalizeStudentBirthDate(text);
+            return birthDate?formatStudentBirthDate(birthDate):(regularEvalExtractBirthYear(text)||text);
+        }
+        window.regularEvalHandleImport=async function(input){
+            const file=input?.files?.[0];if(!file)return;
+            try{
+                regularEvalSetLoading('Đang đọc các Sheet và đối chiếu học sinh…');
+                const XLSX=await regularEvalEnsureXLSX(),wb=XLSX.read(await file.arrayBuffer(),{type:'array'}),r=regularEvalState();
+                const schoolYear=regularEvalSchoolYear(),known=state.students||[],newCandidates=new Map(),work=[],invalid=[],skippedSheets=[];
+                const recognized=new Set(),sheetMonths={},matchedIds=new Set();
+                let skippedRows=0,lockedRows=0,importedRows=0;
+                const csv=/\.csv$/i.test(file.name);
+                const cell=(row,idx)=>idx>=0?String(row[idx]??'').trim():'';
+                for(const sheetName of wb.SheetNames){
+                    const key=regularEvalSheetKey(sheetName);
+                    if(key==='huongdan'||key==='sotonghop'||key==='instructions')continue;
+                    const subject=regularEvalSubjectFromSheetName(sheetName)||(csv&&wb.SheetNames.length===1?regularEvalSubject():null);
+                    if(!subject){skippedSheets.push(sheetName);continue;}
+                    const matrix=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,raw:false,defval:''});
+                    const map=regularEvalImportHeaderMap(matrix);
+                    if(!map){skippedSheets.push(`${sheetName} (thiếu cột Mã định danh/Họ và tên)`);continue;}
+                    recognized.add(subject.id);
+                    if(!sheetMonths[subject.id])sheetMonths[subject.id]=new Set();
+                    for(let rowIndex=map.start;rowIndex<matrix.length;rowIndex++){
+                        const row=matrix[rowIndex]||[],code=cell(row,map.code),name=cell(row,map.name),dob=regularEvalImportDate(cell(row,map.dob));
+                        if(!code&&!name)continue;
+                        if(regularEvalSheetKey(name)==='hovaten'||regularEvalSheetKey(code).startsWith('madinhdanh'))continue;
+                        const codeKey=regularEvalSheetKey(code),nameKey=regularEvalSheetKey(name),dobKey=regularEvalSheetKey(dob);
+                        const monthRaw=cell(row,map.month),monthNum=monthRaw?Number(monthRaw.match(/\d{1,2}/)?.[0]):Number(r.settings.month);
+                        if(!Number.isInteger(monthNum)||monthNum<1||monthNum>12){invalid.push(`${sheetName} · dòng ${rowIndex+1}: tháng không hợp lệ`);skippedRows++;continue;}
+                        let student=null,conflict=false;
+                        if(codeKey){
+                            const matches=known.filter(s=>regularEvalSheetKey(regularEvalStudentCode(s))===codeKey);
+                            if(matches.length===1)student=matches[0];
+                            else if(matches.length>1)conflict=true;
+                            else if(nameKey&&dobKey&&known.some(s=>regularEvalSheetKey(s.name)===nameKey&&regularEvalSheetKey(regularEvalStudentDob(s))===dobKey))conflict=true;
+                        }else if(nameKey&&dobKey){
+                            const matches=known.filter(s=>regularEvalSheetKey(s.name)===nameKey&&regularEvalSheetKey(regularEvalStudentDob(s))===dobKey);
+                            if(matches.length===1)student=matches[0];else if(matches.length>1)conflict=true;
+                        }
+                        if(conflict||(!student&&(!nameKey||(!codeKey&&!dobKey)))){
+                            invalid.push(`${sheetName} · dòng ${rowIndex+1}: học sinh trùng/không đủ thông tin đối chiếu (${name||code})`);skippedRows++;continue;
+                        }
+                        let newKey='';
+                        if(!student){
+                            newKey=codeKey?`code:${codeKey}`:`namedob:${nameKey}:${dobKey}`;
+                            const pending=newCandidates.get(newKey);
+                            const nameDobConflict=nameKey&&dobKey&&[...newCandidates.entries()].some(([key,entry])=>
+                                key!==newKey&&regularEvalSheetKey(entry.name)===nameKey&&regularEvalSheetKey(entry.dob)===dobKey);
+                            const codeConflict=pending&&nameKey&&regularEvalSheetKey(pending.name)!==nameKey;
+                            if(nameDobConflict||codeConflict){
+                                invalid.push(`${sheetName} · dòng ${rowIndex+1}: dữ liệu định danh mâu thuẫn giữa các Sheet (${name||code})`);skippedRows++;continue;
                             }
-                            ev[field]=normalized;
-                            if(ev.validationErrors)delete ev.validationErrors[field];
+                            if(!pending)newCandidates.set(newKey,{name:name||code,moetCode:code,dob,birthDate:normalizeStudentBirthDate(cell(row,map.dob))||'',birthYear:regularEvalExtractBirthYear(dob),className:r.settings.className||state.admin?.className||''});
+                        }
+                        const updates={},bad=[];
+                        REGULAR_EVAL_GROUPS.forEach(group=>{
+                            const levelRaw=cell(row,map.groups[group.levelField]);
+                            if(levelRaw){
+                                try{updates[group.levelField]=normalizeEvaluationScore(levelRaw);}
+                                catch{bad.push(`${group.label}: “${levelRaw}”`);}
+                            }
+                            const value=cell(row,map.groups[group.textField]);
+                            if(value)updates[group.textField]=regularEvalLimit(value,250);
                         });
-                        [['monHoc_noiDung',1],['nlc_noiDung',3],['nldt_noiDung',5],['pc_noiDung',7]].forEach(([field,offset])=>setFilled(ev,field,row[b+offset],250));
-                        if(ev.validationErrors&&!Object.keys(ev.validationErrors).length)delete ev.validationErrors;
-                        updated++;
+                        if(bad.length)invalid.push(`${sheetName} · dòng ${rowIndex+1} · ${name||code}: ${bad.join(', ')}`);
+                        work.push({student,newKey,subjectId:subject.id,month:monthNum,updates});
+                        sheetMonths[subject.id].add(monthNum);
                     }
                 }
-                if(!dataFound)throw new Error("Không tìm thấy cột 'Mã định danh' hoặc 'Họ và tên'.");
-                if(usesWorkingRoster)r.rosterByClass[rosterKey]=[...new Set([...(r.rosterByClass[rosterKey]||[]).map(String),...importedStudentIds])];
-                r.settings.month=importedMonth;
-                await saveData(); regularEvalSetLoading(''); renderLayout();
-                if(invalidLevels.length){
-                    const shown=invalidLevels.slice(0,40),more=invalidLevels.length>shown.length?`\n…và ${invalidLevels.length-shown.length} lỗi khác.`:'';
-                    alert(`Có ${invalidLevels.length} ô Mã không hợp lệ. Các ô này đã được đánh dấu và không bị tự gán điểm mặc định.\n\n${shown.map(v=>`• ${v}`).join('\n')}${more}\n\nChỉ nhập điểm nguyên từ 2 đến 10.`);
-                    showToast(`Đã nhập dữ liệu nhưng có ${invalidLevels.length} ô Mã cần sửa.`,'error');
-                }else showToast(`Đã đồng bộ ${updated} dòng đánh giá · thêm ${added} học sinh · cập nhật ${profilesUpdated} hồ sơ chung. Ô Excel trống không xóa dữ liệu cũ.`,'success');
-            }catch(e){regularEvalSetLoading('');console.error(e);showToast(`Lỗi nhập Excel: ${e?.message||e}`,'error');}
+                if(!recognized.size)throw new Error('Không tìm thấy Sheet tên môn hợp lệ có tiêu đề học sinh. Hãy dùng “Mẫu Excel” để tạo file đúng định dạng.');
+                let allowNew=false;
+                if(newCandidates.size){
+                    regularEvalSetLoading('');
+                    allowNew=confirm(`File có ${newCandidates.size} học sinh chưa tìm thấy trong hồ sơ chung.\n\nBấm OK để thêm những học sinh này vào Quản lý học sinh và nhập nhận xét.\nBấm Hủy để chỉ nhập cho học sinh đã tồn tại (không thay đổi danh sách chung).`);
+                }
+                const resolvedNew=new Map();
+                if(allowNew){
+                    newCandidates.forEach((v,key)=>{
+                        const birthDate=v.birthDate;
+                        const student={id:`stu-${Date.now()}-${Math.random().toString(36).slice(2,9)}`,name:v.name,moetCode:v.moetCode,birthDate,birthYear:birthDate?birthDate.slice(0,4):v.birthYear,dob:v.dob,className:v.className,gender:'',group:'',role:'',goal:'',talent:'',points:0,stars:0,history:[]};
+                        known.push(student);resolvedNew.set(key,student);
+                    });
+                }
+                for(const item of work){
+                    const student=item.student||resolvedNew.get(item.newKey);
+                    if(!student){skippedRows++;continue;}
+                    matchedIds.add(String(student.id));
+                    if(!Object.keys(item.updates).length)continue;
+                    let ev=regularEvalGetEvaluation(student.id,item.month,item.subjectId,schoolYear);
+                    if(ev?.isLocked){lockedRows++;continue;}
+                    if(!ev)ev=regularEvalEnsureEvaluation(student.id,item.month,item.subjectId);
+                    // Từng ô không trống mới được ghi; khóa theo học sinh + năm + tháng + môn.
+                    Object.entries(item.updates).forEach(([field,value])=>{
+                        ev[field]=value;
+                        if(ev.validationErrors?.[field])delete ev.validationErrors[field];
+                        if(field.endsWith('_noiDung')&&ev.aiCommentScores)delete ev.aiCommentScores[field];
+                    });
+                    if(ev.validationErrors&&!Object.keys(ev.validationErrors).length)delete ev.validationErrors;
+                    importedRows++;
+                }
+                const rosterKey=String(r.settings.className||'').trim();
+                if(Object.prototype.hasOwnProperty.call(r.rosterByClass,rosterKey)){
+                    r.rosterByClass[rosterKey]=[...new Set([...(r.rosterByClass[rosterKey]||[]).map(String),...matchedIds])];
+                }
+                r.lastExcelImport={fileName:file.name,schoolYear,className:rosterKey,subjects:Object.fromEntries(Object.entries(sheetMonths).map(([id,months])=>[id,[...months]]))};
+                if(!r.importedSubjectsByClass||typeof r.importedSubjectsByClass!=='object')r.importedSubjectsByClass={};
+                const contextKey=`${schoolYear}|${rosterKey}`;
+                r.importedSubjectsByClass[contextKey]=[...new Set([...(r.importedSubjectsByClass[contextKey]||[]),...recognized])];
+                await saveData();regularEvalSetLoading('');renderLayout();
+                const subjectsWithData=Object.keys(r.lastExcelImport.subjects).length;
+                showToast(`Nhập ${importedRows} dòng đánh giá thuộc ${subjectsWithData} môn; ${allowNew?resolvedNew.size:0} học sinh mới; ${skippedRows} dòng bỏ qua; ${lockedRows} dòng khóa; ${invalid.length} lỗi ô/cột.`,invalid.length||skippedRows?'error':'success');
+                if(invalid.length||skippedSheets.length){
+                    const messages=[...invalid.slice(0,20),...skippedSheets.map(s=>`Bỏ qua Sheet: ${s}`).slice(0,10)];
+                    alert(`Đã hoàn tất nhập các môn hợp lệ.\n\n${messages.join('\n')}${invalid.length>20?'\n… còn các lỗi khác':''}\n\nDữ liệu cũ và các ô trống được giữ nguyên.`);
+                }
+            }catch(error){regularEvalSetLoading('');console.error(error);showToast(`Lỗi nhập File mẫu: ${error?.message||error}`,'error');}
             finally{if(input)input.value='';}
         };
+        function regularEvalImportedSubjectNotice(){
+            const r=regularEvalState(),latest=r.lastExcelImport;
+            if(!latest||latest.schoolYear!==regularEvalSchoolYear()||latest.className!==String(r.settings.className||'').trim())return '';
+            const months=latest.subjects?.[r.settings.subjectId]||[];
+            if(months.map(Number).includes(Number(r.settings.month)))return '';
+            const subject=regularEvalSubject();
+            return `<div class="regular-eval-import-notice" role="status"><i class="ph-bold ph-info"></i> File đã nhập chưa có dữ liệu môn ${mfgEsc(subject.name)}${months.length?` trong tháng ${r.settings.month}`:''}. Dữ liệu đã lưu trước đó của môn này vẫn được giữ nguyên.</div>`;
+        }
         window.regularEvalExportExcel = async function(){
             try{
                 const r=regularEvalState(),students=regularEvalStudents(),month=r.settings.month;
@@ -2631,7 +2791,7 @@ NGUYÊN TẮC BẮT BUỘC:
             const r=regularEvalState(),subject=regularEvalSubject(),subjects=regularEvalSubjectsForGrade(r.settings.grade),students=regularEvalStudents(),khdh=r.khdhMap[regularEvalKhdhKey()]||'',classes=regularEvalClassOptions();
             const classOptions=classes.map(c=>`<option value="${escapeHtmlAttr(c)}" ${c===r.settings.className?'selected':''}>${mfgEsc(c)}</option>`).join('');
             const rows=students.map((s,idx)=>{const ev=regularEvalGetEvaluation(s.id,r.settings.month,r.settings.subjectId)||regularEvalDefaultEvaluation(s.id,r.settings.month,r.settings.subjectId);return `<tr><td class="regular-eval-cell regular-eval-stt">${idx+1}</td><td class="regular-eval-cell regular-eval-code">${mfgEsc(s.code||'—')}</td><td class="regular-eval-cell regular-eval-name">${mfgEsc(s.name)}</td><td class="regular-eval-cell regular-eval-dob">${mfgEsc(s.dob||'—')}</td><td class="regular-eval-cell">${mfgEsc(s.gender||'—')}</td><td class="regular-eval-cell">${mfgEsc(s.group||'—')}</td><td class="regular-eval-cell regular-eval-month">${r.settings.month}</td><td class="regular-eval-ai-cell">${regularEvalAiControl(s.id,ev)}</td>${regularEvalCodeCell(s.id,'monHoc_ma',ev.monHoc_ma,ev.isLocked)}${regularEvalTextCell(s.id,'monHoc_noiDung',ev.monHoc_noiDung,ev.isLocked)}${regularEvalCodeCell(s.id,'nlc_ma',ev.nlc_ma,ev.isLocked)}${regularEvalTextCell(s.id,'nlc_noiDung',ev.nlc_noiDung,ev.isLocked)}${regularEvalCodeCell(s.id,'nldt_ma',ev.nldt_ma,ev.isLocked)}${regularEvalTextCell(s.id,'nldt_noiDung',ev.nldt_noiDung,ev.isLocked)}${regularEvalCodeCell(s.id,'pc_ma',ev.pc_ma,ev.isLocked)}${regularEvalTextCell(s.id,'pc_noiDung',ev.pc_noiDung,ev.isLocked)}</tr>`;}).join('');
-            return `<section class="regular-eval-page"><div class="regular-eval-toolbar"><button type="button" onclick="switchTab('nhan-xet')" class="regular-eval-back"><i class="ph-bold ph-arrow-left"></i> Quay lại Nhận xét</button><span class="regular-eval-chip"><i class="ph-fill ph-arrows-clockwise"></i>Tự đồng bộ hồ sơ học sinh chung</span></div><div class="regular-eval-hero"><div class="regular-eval-hero-main"><div class="regular-eval-hero-icon"><i class="ph-fill ph-calendar-pencil"></i></div><div><div class="regular-eval-eyebrow">Nhận xét học sinh · Theo tháng</div><h1 class="regular-eval-title">Nhập đánh giá thường xuyên</h1><p class="regular-eval-subtitle">Danh sách luôn lấy trực tiếp từ Quản lý học sinh chung. File Excel chỉ bổ sung/cập nhật hồ sơ và không xóa dữ liệu cũ khi ô để trống. Nhận xét được lưu riêng theo học sinh, năm học, tháng và môn.</p></div></div><div class="regular-eval-context"><span class="regular-eval-chip"><i class="ph-fill ph-users-three"></i>${students.length} học sinh</span><span class="regular-eval-chip"><i class="ph-fill ph-calendar-dots"></i>${mfgEsc(regularEvalSchoolYear())}</span></div></div><div class="regular-eval-panel"><div class="regular-eval-filter"><div class="regular-eval-filter-grid"><div class="regular-eval-field"><label>Khối</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('grade',this.value)">${[1,2,3,4,5].map(g=>`<option value="${g}" ${String(g)===String(r.settings.grade)?'selected':''}>Khối ${g}</option>`).join('')}</select></div><div class="regular-eval-field"><label>Lớp</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('className',this.value)">${classOptions}</select></div><div class="regular-eval-field"><label>Tháng</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('month',this.value)">${REGULAR_EVAL_MONTHS.map(m=>`<option value="${m}" ${Number(m)===Number(r.settings.month)?'selected':''}>Tháng ${m}</option>`).join('')}</select></div><div class="regular-eval-field"><label>Môn học</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('subjectId',this.value)">${subjects.map(s=>`<option value="${s.id}" ${s.id===r.settings.subjectId?'selected':''}>${mfgEsc(s.name)}</option>`).join('')}</select></div></div><div class="regular-eval-actions"><button class="regular-eval-btn red" onclick="regularEvalClearData()"><i class="ph-bold ph-trash"></i> Xóa đánh giá</button><button class="regular-eval-btn gray" onclick="regularEvalDownloadTemplate()"><i class="ph-bold ph-download-simple"></i> Mẫu Excel</button><button class="regular-eval-btn indigo" onclick="regularEvalOpenImport()"><i class="ph-bold ph-upload-simple"></i> Nhập File mẫu</button><button class="regular-eval-btn gray" onclick="regularEvalOpenHistory()"><i class="ph-bold ph-clock-counter-clockwise"></i> Lịch sử nhận xét</button><button class="regular-eval-btn ai" onclick="regularEvalGenerateBulk()"><i class="ph-fill ph-sparkle"></i> AI toàn lớp</button><button class="regular-eval-btn export" onclick="regularEvalExportExcel()"><i class="ph-bold ph-file-xls"></i> Xuất Excel</button></div></div><div class="regular-eval-khdh"><div class="regular-eval-khdh-head"><div><div class="regular-eval-khdh-title"><i class="ph-fill ph-book-open-text"></i>KHDH tháng ${r.settings.month} · ${mfgEsc(subject.name)}</div><div class="regular-eval-note">AI kết hợp KHDH hiện tại với nhận xét tháng trước của đúng học sinh và đúng môn.</div></div><div class="regular-eval-actions"><button class="regular-eval-btn gray" onclick="regularEvalClearKHDH()">Xóa KHDH</button><button class="regular-eval-btn indigo" onclick="regularEvalOpenKHDHFile()">Nhập KHDH</button></div></div><textarea maxlength="4000" oninput="regularEvalUpdateKHDH(this.value)" placeholder="Nhập hoặc tải KHDH tháng hiện tại…">${mfgEsc(khdh)}</textarea></div></div><input type="file" id="regular-eval-import-input" class="hidden" accept=".xlsx,.xls,.csv" onchange="regularEvalHandleImport(this)"><input type="file" id="regular-eval-khdh-input" class="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv" onchange="regularEvalHandleKHDHFile(this)">${regularEvalBulkSummaryHtml()}${regularEvalHistoryHtml(students)}<div class="regular-eval-table-wrap custom-scrollbar"><table class="regular-eval-table"><thead><tr><th rowspan="2">STT</th><th rowspan="2">Mã định danh Bộ GD&amp;ĐT</th><th rowspan="2">Họ và tên</th><th rowspan="2">Ngày sinh</th><th rowspan="2">Giới tính</th><th rowspan="2">Tổ</th><th rowspan="2">Tháng</th><th rowspan="2">Thao tác AI</th><th colspan="2">Môn học và hoạt động giáo dục</th><th colspan="2">Nhận xét năng lực chung</th><th colspan="2">Nhận xét năng lực đặc thù</th><th colspan="2">Nhận xét phẩm chất chủ yếu</th></tr><tr><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th></tr></thead><tbody>${rows||`<tr><td colspan="16" class="regular-eval-empty"><i class="ph-duotone ph-users"></i>Chưa có hồ sơ học sinh chung. Hãy thêm tại Quản lý học sinh hoặc dùng “Nhập File mẫu”.</td></tr>`}</tbody></table></div></section>`;
+            return `<section class="regular-eval-page"><div class="regular-eval-toolbar"><button type="button" onclick="switchTab('nhan-xet')" class="regular-eval-back"><i class="ph-bold ph-arrow-left"></i> Quay lại Nhận xét</button><span class="regular-eval-chip"><i class="ph-fill ph-arrows-clockwise"></i>Tự đồng bộ hồ sơ học sinh chung</span></div><div class="regular-eval-hero"><div class="regular-eval-hero-main"><div class="regular-eval-hero-icon"><i class="ph-fill ph-calendar-pencil"></i></div><div><div class="regular-eval-eyebrow">Nhận xét học sinh · Theo tháng</div><h1 class="regular-eval-title">Nhập đánh giá thường xuyên</h1><p class="regular-eval-subtitle">Danh sách luôn lấy trực tiếp từ Quản lý học sinh chung. File Excel chỉ bổ sung/cập nhật hồ sơ và không xóa dữ liệu cũ khi ô để trống. Nhận xét được lưu riêng theo học sinh, năm học, tháng và môn.</p></div></div><div class="regular-eval-context"><span class="regular-eval-chip"><i class="ph-fill ph-users-three"></i>${students.length} học sinh</span><span class="regular-eval-chip"><i class="ph-fill ph-calendar-dots"></i>${mfgEsc(regularEvalSchoolYear())}</span></div></div><div class="regular-eval-panel"><div class="regular-eval-filter"><div class="regular-eval-filter-grid"><div class="regular-eval-field"><label>Khối</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('grade',this.value)">${[1,2,3,4,5].map(g=>`<option value="${g}" ${String(g)===String(r.settings.grade)?'selected':''}>Khối ${g}</option>`).join('')}</select></div><div class="regular-eval-field"><label>Lớp</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('className',this.value)">${classOptions}</select></div><div class="regular-eval-field"><label>Tháng</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('month',this.value)">${REGULAR_EVAL_MONTHS.map(m=>`<option value="${m}" ${Number(m)===Number(r.settings.month)?'selected':''}>Tháng ${m}</option>`).join('')}</select></div><div class="regular-eval-field"><label>Môn học</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('subjectId',this.value)">${subjects.map(s=>`<option value="${s.id}" ${s.id===r.settings.subjectId?'selected':''}>${mfgEsc(s.name)}</option>`).join('')}</select></div></div><div class="regular-eval-actions"><button class="regular-eval-btn red" onclick="regularEvalClearData()"><i class="ph-bold ph-trash"></i> Xóa đánh giá</button><button class="regular-eval-btn gray" onclick="regularEvalDownloadTemplate()"><i class="ph-bold ph-download-simple"></i> Mẫu Excel</button><button class="regular-eval-btn indigo" onclick="regularEvalOpenImport()"><i class="ph-bold ph-upload-simple"></i> Nhập File mẫu</button><button class="regular-eval-btn gray" onclick="regularEvalOpenHistory()"><i class="ph-bold ph-clock-counter-clockwise"></i> Lịch sử nhận xét</button><button class="regular-eval-btn ai" onclick="regularEvalGenerateBulk()"><i class="ph-fill ph-sparkle"></i> AI toàn lớp</button><button class="regular-eval-btn export" onclick="regularEvalExportExcel()"><i class="ph-bold ph-file-xls"></i> Xuất Excel</button></div></div><div class="regular-eval-khdh"><div class="regular-eval-khdh-head"><div><div class="regular-eval-khdh-title"><i class="ph-fill ph-book-open-text"></i>KHDH tháng ${r.settings.month} · ${mfgEsc(subject.name)}</div><div class="regular-eval-note">AI kết hợp KHDH hiện tại với nhận xét tháng trước của đúng học sinh và đúng môn.</div></div><div class="regular-eval-actions"><button class="regular-eval-btn gray" onclick="regularEvalClearKHDH()">Xóa KHDH</button><button class="regular-eval-btn indigo" onclick="regularEvalOpenKHDHFile()">Nhập KHDH</button></div></div><textarea maxlength="4000" oninput="regularEvalUpdateKHDH(this.value)" placeholder="Nhập hoặc tải KHDH tháng hiện tại…">${mfgEsc(khdh)}</textarea></div></div><input type="file" id="regular-eval-import-input" class="hidden" accept=".xlsx,.xls,.csv" onchange="regularEvalHandleImport(this)"><input type="file" id="regular-eval-khdh-input" class="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv" onchange="regularEvalHandleKHDHFile(this)">${regularEvalImportedSubjectNotice()}${regularEvalBulkSummaryHtml()}${regularEvalHistoryHtml(students)}<div class="regular-eval-table-wrap custom-scrollbar"><table class="regular-eval-table"><thead><tr><th rowspan="2">STT</th><th rowspan="2">Mã định danh Bộ GD&amp;ĐT</th><th rowspan="2">Họ và tên</th><th rowspan="2">Ngày sinh</th><th rowspan="2">Giới tính</th><th rowspan="2">Tổ</th><th rowspan="2">Tháng</th><th rowspan="2">Thao tác AI</th><th colspan="2">Môn học và hoạt động giáo dục</th><th colspan="2">Nhận xét năng lực chung</th><th colspan="2">Nhận xét năng lực đặc thù</th><th colspan="2">Nhận xét phẩm chất chủ yếu</th></tr><tr><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th></tr></thead><tbody>${rows||`<tr><td colspan="16" class="regular-eval-empty"><i class="ph-duotone ph-users"></i>Chưa có hồ sơ học sinh chung. Hãy thêm tại Quản lý học sinh hoặc dùng “Nhập File mẫu”.</td></tr>`}</tbody></table></div></section>`;
         };
 
         const regularEvalRenderBase=RegularEvaluationPage.render;
