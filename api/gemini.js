@@ -129,9 +129,9 @@ function thinkingLevelFor(model) {
   return model === 'gemini-3.7-flash' ? 'low' : 'minimal';
 }
 
-async function googleGenerate({ apiKey, model, body, timeoutMs = 22000 }) {
+async function googleGenerate({ apiKey, model, body }) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const timer = setTimeout(() => controller.abort(), 22000);
   try {
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
       method: 'POST',
@@ -259,10 +259,10 @@ async function generateRegularEvaluation(apiKey, prompt) {
 
 async function analyzeRegularEvaluationKHDH(apiKey, { documentText, prompt }) {
   let lastError;
-  const text = String(documentText || '').slice(0,60000);
+  const text = String(documentText || '').slice(0,16000);
   for (const model of MODEL_CANDIDATES) {
     try {
-      const data = await googleGenerate({ apiKey, model, body:{ contents:[{parts:[{text:`${text}\n\n${String(prompt||'')}`}]}], generationConfig:{responseMimeType:'application/json',maxOutputTokens:8192,thinkingConfig:{thinkingLevel:thinkingLevelFor(model)}} },timeoutMs:60000});
+      const data = await googleGenerate({ apiKey, model, body:{ contents:[{parts:[{text:`${text}\n\n${String(prompt||'')}`}]}], generationConfig:{maxOutputTokens:8192,responseMimeType:'application/json',thinkingConfig:{thinkingLevel:thinkingLevelFor(model)}} }});
       const result = data?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('').trim() || '';
       if (!result) throw Object.assign(new Error('Gemini không trả về nội dung KHDH.'), {contentInvalid:true});
       return { model, text:result };
