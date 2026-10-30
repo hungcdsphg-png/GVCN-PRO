@@ -9,6 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="assets/khdh-parser.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
 
     <!-- Tailwind Configuration -->
@@ -1362,25 +1363,6 @@
         .regular-eval-khdh-title{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:1000;color:#1e40af}
         .regular-eval-khdh textarea{width:100%;min-height:78px;resize:vertical;background:#fff;border:1px solid #bfdbfe;border-radius:14px;padding:11px 12px;font-size:11px;line-height:1.48;color:#334155;outline:none;box-shadow:inset 0 1px 3px rgba(15,23,42,.03)}
         .regular-eval-khdh textarea:focus{border-color:#60a5fa;box-shadow:0 0 0 3px rgba(59,130,246,.09)}
-
-        /* KHDH: subject/lesson tree, independently persisted by class and month */
-        .regular-khdh-tree{background:#fff;border:1px solid #cbd5e1;border-radius:17px;padding:15px;box-shadow:0 4px 15px rgba(37,99,235,.05);margin-top:10px;color:#334155}
-        .regular-khdh-top{display:flex;justify-content:space-between;gap:12px;align-items:start;flex-wrap:wrap;margin-bottom:12px}
-        .regular-khdh-top h3{font-size:15px;font-weight:900;color:#1e40af;margin:0 0 3px}.regular-khdh-top p{font-size:11px;color:#64748b;margin:0}
-        .regular-khdh-buttons{display:flex;gap:6px;flex-wrap:wrap}.regular-khdh-link{border:1px solid #c7d2fe;border-radius:9px;background:#eef2ff;color:#4338ca;padding:7px 9px;font-size:11px;font-weight:800;cursor:pointer}
-        .regular-khdh-link:hover{background:#dbeafe}.regular-khdh-filters{display:flex;flex-wrap:wrap;align-items:end;gap:7px;margin-bottom:12px;background:#f8fafc;padding:10px;border-radius:12px}
-        .regular-khdh-filters label{font-size:10px;font-weight:800;color:#475569;display:flex;flex-direction:column;gap:4px}.regular-khdh-filters select{min-width:110px;max-width:170px;height:31px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;font-size:11px;padding:0 6px}
-        .regular-khdh-filters .regular-khdh-filter-check{flex-direction:row;align-items:center;height:31px;gap:5px}
-        .regular-khdh-topic{border:1px solid #dbeafe;border-radius:13px;margin:9px 0;background:#f8fbff;overflow:hidden}.regular-khdh-topic-header{padding:10px;display:flex;align-items:center;gap:10px;background:#eff6ff}
-        .regular-khdh-topic-header b{flex:1;color:#1e40af;font-size:12px;line-height:1.4}.regular-khdh-expander{border:1px solid #bfdbfe;width:26px;height:26px;border-radius:7px;background:#fff;color:#2563eb;cursor:pointer}
-        .regular-khdh-chip{display:inline-flex;border-radius:7px;padding:4px 7px;background:#dbeafe;color:#1d4ed8;font-size:10px;font-weight:800;white-space:nowrap}.regular-khdh-chip.week{background:#e0e7ff;color:#4338ca}
-        .regular-khdh-lessons{padding:7px 11px 10px}.regular-khdh-lesson{border:1px solid #e2e8f0;background:#fff;border-radius:10px;padding:9px 11px;margin:6px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}.regular-khdh-lesson.is-selected{border-color:#86efac;background:#f0fdf4}
-        .regular-khdh-lesson-label{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;flex:1;min-width:190px;cursor:pointer}.regular-khdh-lesson-meta{display:flex;gap:5px;flex-wrap:wrap}.regular-khdh-focus-summary{flex:1 1 100%;font-size:10px;color:#475569;padding-left:25px}.regular-khdh-editline .regular-khdh-focus{min-width:230px;max-width:400px}
-        .regular-khdh-tree input[type=checkbox]{width:16px;height:16px;accent-color:#4f46e5;flex-shrink:0;cursor:pointer}.regular-khdh-editline{display:flex;gap:5px;flex-wrap:wrap;align-items:center;padding:8px;border-top:1px dashed #cbd5e1;width:100%}
-        .regular-khdh-editline input{border:1px solid #cbd5e1;border-radius:7px;padding:6px;font-size:11px;min-width:60px;max-width:220px;flex:1}.regular-khdh-editline input[type=number]{max-width:80px}.regular-khdh-editline button{padding:6px;border-radius:7px;border:1px solid #fecaca;color:#b91c1c;background:#fff1f2;font-size:10px;font-weight:700}
-        .regular-khdh-summary{font-size:11px;color:#166534;margin-top:12px;padding:10px;border-radius:9px;background:#f0fdf4}.regular-khdh-none{padding:12px;color:#64748b;font-size:11px}.regular-khdh-warning{background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;padding:9px;font-size:11px;color:#9a3412;margin:8px 0}
-        .regular-khdh-legacy{margin-top:11px;font-size:11px;color:#64748b}.regular-khdh-legacy summary{cursor:pointer;font-weight:700;padding:8px}.regular-khdh-legacy textarea{width:100%;min-height:90px}
-        @media(max-width:640px){.regular-khdh-top{flex-direction:column}.regular-khdh-topic-header{flex-wrap:wrap}.regular-khdh-chip{font-size:9px}.regular-khdh-filters label{flex:1 1 120px}}
         .regular-eval-table-wrap{position:relative;overflow:auto;max-height:calc(100vh - 400px);min-height:370px;background:#fff;border:1px solid #cbd5e1;border-radius:20px;box-shadow:0 12px 30px rgba(51,65,85,.06)}
         .regular-eval-table{width:100%;min-width:1880px;border-collapse:separate;border-spacing:0;font-size:11px;background:#fff}
         .regular-eval-table th,.regular-eval-table td{border-right:1px solid #cbd5e1;border-bottom:1px solid #cbd5e1;vertical-align:middle}
@@ -1418,6 +1400,13 @@
         .regular-eval-history-body{padding:0 16px 16px;border-top:1px solid #e0e7ff}.regular-eval-history-controls{display:flex;gap:10px;align-items:end;flex-wrap:wrap;padding-top:12px}.regular-eval-history-controls .regular-eval-field{min-width:240px;flex:1}
         .regular-eval-history-months{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}.regular-eval-history-month{border:1px solid #cbd5e1;background:#fff;color:#64748b;border-radius:999px;padding:6px 11px;font-size:10px;font-weight:900}.regular-eval-history-month.active{background:#4f46e5;border-color:#4f46e5;color:#fff}
         .regular-eval-history-card{border:1px solid #e2e8f0;border-radius:14px;padding:12px;background:#fff}.regular-eval-history-meta{font-size:10px;font-weight:900;color:#475569;margin-bottom:8px}.regular-eval-history-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.regular-eval-history-item{padding:9px;border-radius:10px;background:#f8fafc;font-size:10px;line-height:1.45;color:#475569}.regular-eval-history-item b{display:block;color:#334155;margin-bottom:3px}
+        /* KHDH subject / lesson tree (isolated from other app modules) */
+        .khdh-toolbar-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:8px 0 13px}.khdh-toolbar-top h3{font-size:16px;font-weight:900;color:#1e3a8a;margin:0}.khdh-toolbar-top p{font-size:11px;color:#64748b;margin:3px 0}
+        .khdh-filter-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0 13px}.khdh-filter-grid label{font-size:11px;font-weight:700;color:#475569}.khdh-filter-grid .regular-eval-input{width:100%;margin-top:4px}
+        .khdh-topic{border:1px solid #dbeafe;background:#fff;border-radius:16px;margin:10px 0;overflow:hidden;box-shadow:0 2px 8px rgba(30,58,138,.045)}.khdh-topic-head{display:flex;align-items:center;gap:9px;padding:12px;background:linear-gradient(95deg,#eff6ff,#f8fafc);flex-wrap:wrap}.khdh-expand{background:#dbeafe;color:#1e40af;border-radius:8px;width:30px;height:30px;flex:none}.khdh-topic-label{display:flex;align-items:center;gap:9px;flex:1;min-width:180px;font-size:13px;color:#1e3a8a;cursor:pointer}.khdh-topic-label strong{font-weight:850}.khdh-topic-label input,.khdh-lesson-checkbox input{width:16px;height:16px;accent-color:#2563eb;flex:none}.khdh-topic-body{padding:7px 11px 11px}.khdh-lesson{display:flex;align-items:center;gap:8px;padding:10px 11px;border-radius:10px;margin:5px 0;border:1px solid #e2e8f0;background:#fff;flex-wrap:wrap}.khdh-lesson.selected{background:#f0f9ff;border-color:#bfdbfe}.khdh-lesson-checkbox{display:flex;align-items:center;gap:10px;flex:1;min-width:200px;cursor:pointer}.khdh-lesson-title{font-size:12px;color:#334155;font-weight:700}.khdh-badges{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.khdh-badge{display:inline-flex;padding:4px 8px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-size:10px;font-weight:800;white-space:nowrap}.khdh-badge.week{background:#f0fdf4;color:#15803d}
+        .khdh-edit-grid{flex-basis:100%;display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;padding:9px;background:#f8fafc;border-radius:9px}.khdh-edit-grid label{display:flex;flex:1 1 115px;flex-direction:column;gap:4px;font-size:10px;color:#475569;font-weight:700}.khdh-edit-grid label:first-child{flex-basis:260px}.khdh-edit-grid input{border:1px solid #cbd5e1;border-radius:7px;background:white;font-size:12px;padding:7px;max-width:100%;min-width:0}.khdh-delete{color:#b91c1c;background:#fee2e2;border-radius:8px;padding:7px 10px;font-size:11px}.khdh-add{font-size:11px;color:#1d4ed8;border:1px dashed #93c5fd;background:#eff6ff;border-radius:9px;padding:9px 12px;margin-top:8px;font-weight:800}
+        .khdh-legacy{margin-top:12px;border:1px solid #dbeafe;border-radius:10px;padding:10px;background:rgba(255,255,255,.85)}.khdh-legacy summary{font-size:11px;color:#1d4ed8;cursor:pointer;font-weight:700}.khdh-legacy pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px;max-height:250px;overflow:auto;margin-top:9px;color:#334155}.khdh-empty{padding:12px;border:1px dashed #93c5fd;border-radius:12px;background:#fff;font-size:12px;color:#475569}.khdh-empty b{color:#1e40af}.khdh-empty p{margin-top:5px}.khdh-tools{margin-top:8px}.khdh-warning{padding:10px;margin:8px 0;border:1px solid #fde68a;color:#92400e;background:#fffbeb;border-radius:9px;font-size:11px}.khdh-muted{font-size:11px;padding:12px;color:#64748b}
+        @media(max-width:800px){.khdh-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:470px){.khdh-filter-grid{grid-template-columns:1fr}.khdh-lesson-checkbox{min-width:0}.khdh-topic-label{min-width:0}.khdh-topic-head{align-items:start}}
         .regular-eval-template-overlay{position:fixed;inset:0;z-index:230;background:rgba(15,23,42,.58);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:18px}.regular-eval-template-dialog{width:min(520px,100%);background:#fff;border-radius:24px;padding:22px;box-shadow:0 28px 80px rgba(15,23,42,.28);border:1px solid #e2e8f0}.regular-eval-template-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.regular-eval-template-title{font-size:17px;font-weight:1000;color:#1e293b}.regular-eval-template-subtitle{font-size:10px;line-height:1.5;color:#64748b;margin-top:5px}.regular-eval-template-close{width:34px;height:34px;border-radius:10px;background:#f1f5f9;color:#64748b;display:flex;align-items:center;justify-content:center;flex:none}.regular-eval-template-options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}.regular-eval-template-option{border:1px solid #cbd5e1;border-radius:16px;background:#fff;padding:15px;text-align:left;transition:.18s ease}.regular-eval-template-option:hover{border-color:#818cf8;background:#f5f3ff;transform:translateY(-1px)}.regular-eval-template-option:disabled{cursor:not-allowed;opacity:.5;transform:none;background:#f8fafc}.regular-eval-template-option i{font-size:22px;color:#4f46e5}.regular-eval-template-option b{display:block;font-size:12px;color:#334155;margin-top:8px}.regular-eval-template-option span{display:block;font-size:9px;line-height:1.45;color:#64748b;margin-top:4px}
 
         .regular-eval-template-subjects{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;max-height:min(42vh,350px);overflow-y:auto;padding:5px 2px;margin-top:8px}
@@ -2234,7 +2223,7 @@
             let el=document.getElementById('regular-eval-loading');
             if(text){
                 if(!el){el=document.createElement('div');el.id='regular-eval-loading';el.className='regular-eval-loading';document.body.appendChild(el);}
-                el.innerHTML=`<div class="regular-eval-loading-card"><div class="regular-eval-spinner"></div><div class="regular-eval-loading-title">${/KHDH/i.test(text)?"Đang đọc file KHDH...":"AI đang xử lý"}</div><div class="regular-eval-loading-text">${mfgEsc(text)}</div></div>`;
+                el.innerHTML=`<div class="regular-eval-loading-card"><div class="regular-eval-spinner"></div><div class="regular-eval-loading-title">AI đang xử lý</div><div class="regular-eval-loading-text">${mfgEsc(text)}</div></div>`;
             } else if(el) el.remove();
         }
 
@@ -2269,7 +2258,7 @@
         };
         window.regularEvalToggleLock = function(studentId){const r=regularEvalState(),ev=regularEvalEnsureEvaluation(studentId,r.settings.month,r.settings.subjectId);ev.isLocked=!ev.isLocked;window.regularEvaluationRuntime.bulkSummary=null;saveData();renderLayout();};
         window.regularEvalUpdateKHDH = function(value){const r=regularEvalState();r.khdhMap[regularEvalKhdhKey()]=String(value||'');saveData();};
-        window.regularEvalClearKHDH = function(){const r=regularEvalState();if(!r.khdhMap[regularEvalKhdhKey()])return;if(!confirm('Xóa nội dung Trọng tâm KHDH của môn/tháng đang chọn?'))return;delete r.khdhMap[regularEvalKhdhKey()];saveData();renderLayout();showToast('Đã xóa Trọng tâm KHDH của môn/tháng này.','success');};
+        window.regularEvalClearKHDH = function(){const r=regularEvalState(),k=regularEvalKhdhKey();if(!r.khdhMap[k]&&!r.khdhParsedMap[k])return;if(!confirm('Xóa nội dung KHDH đã nhập của riêng môn/tháng này?'))return;delete r.khdhMap[k];delete r.khdhParsedMap[k];saveData();renderLayout();showToast('Đã xóa KHDH của môn/tháng đang chọn.','success');};
         window.regularEvalClearStudents = function(){
             const r=regularEvalState(),students=regularEvalStudents();
             if(!students.length)return showToast('Bảng Nhập đánh giá thường xuyên hiện không có học sinh.','error');
@@ -2311,7 +2300,7 @@ NGUYÊN TẮC BẮT BUỘC:
         function buildRegularEvaluationKHDHBody(payload){
             const prompt=String(payload.prompt||'');
             const parts=Array.isArray(payload.parts)&&payload.parts.length?payload.parts:[{text:`${String(payload.documentText||'').slice(0,50000)}\n\n${prompt}`}];
-            return {contents:[{parts}],generationConfig:{maxOutputTokens:5000,thinkingConfig:{thinkingLevel:getGameGeminiModel()==='gemini-3.7-flash'?'low':'minimal'}}};
+            return {contents:[{parts}],generationConfig:{maxOutputTokens:800,thinkingConfig:{thinkingLevel:getGameGeminiModel()==='gemini-3.7-flash'?'low':'minimal'}}};
         }
 
         function regularEvalPreviousMonth(month){const index=REGULAR_EVAL_MONTHS.indexOf(Number(month));return index>0?REGULAR_EVAL_MONTHS[index-1]:null;}
@@ -2394,7 +2383,7 @@ NGUYÊN TẮC BẮT BUỘC:
             return r.evaluations.some(ev=>String(ev.studentId)!==String(studentId)&&String(ev.schoolYear)===String(regularEvalSchoolYear())&&Number(ev.month)===Number(r.settings.month)&&ev.subjectId===r.settings.subjectId&&regularEvalNormalizeCommentText(ev[group.textField])===normalized);
         }
         async function regularEvalGenerateComment(student, levels,requestedGroupKeys=null){
-            const r=regularEvalState(),subject=regularEvalSubject(),khdh=regularKhdhSelectedText(),previousMonth=regularEvalPreviousMonth(r.settings.month);
+            const r=regularEvalState(),subject=regularEvalSubject(),khdh=regularEvalKHDHSelectedPrompt(),previousMonth=regularEvalPreviousMonth(r.settings.month);
             const previous=previousMonth===null?null:regularEvalGetEvaluation(student.id,previousMonth,r.settings.subjectId,regularEvalSchoolYear());
             const previousText=regularEvalEvaluationText(previous),previousLevels=regularEvalResolveLevels(previous);
             const variation=String(student.id).split('').reduce((a,c)=>a+c.charCodeAt(0),0)%97;
@@ -2421,11 +2410,11 @@ NGUYÊN TẮC BẮT BUỘC:
             return accepted;
         }
         window.regularEvalGenerateStudent = async function(studentId){
-            if(regularKhdhGet()&&!regularKhdhSelectedText().trim())return showToast('Chưa chọn bài trọng tâm KHDH. Hãy tích chọn ít nhất một bài trước khi tạo AI.','error');
             if(!getGameGeminiApiKey())return showToast('Chưa cấu hình Gemini API.','error');
             const student=regularEvalStudents().find(s=>String(s.id)===String(studentId));if(!student)return;
             const r=regularEvalState(),ev=regularEvalEnsureEvaluation(student.id,r.settings.month,r.settings.subjectId);
             if(ev.isLocked)return showToast('Nhận xét của học sinh này đang khóa 🔒.','error');
+            if(regularEvalKHDHCurrent()&&!window.KHDHParser.stats(regularEvalKHDHCurrent()).selected)return showToast('Hãy chọn ít nhất một bài KHDH làm trọng tâm trước khi tạo AI.','error');
             const completion=regularEvalStudentCompletion(student);
             if(completion.missingScoreGroups.length||regularEvalHasInvalidLevels(ev)){
                 return alert(`${student.name}: vui lòng nhập đủ điểm 2–10 trước khi tạo AI.\n${completion.reasons.join('\n')}`);
@@ -2440,9 +2429,9 @@ NGUYÊN TẮC BẮT BUỘC:
             }catch(e){regularEvalSetLoading('');console.error(e);showToast(`AI lỗi: ${e?.message||e}`,'error');}
         };
         window.regularEvalGenerateBulk = async function(onlyMissing=false){
-            if(regularKhdhGet()&&!regularKhdhSelectedText().trim())return showToast('Chưa chọn bài trọng tâm KHDH. Hãy tích chọn ít nhất một bài trước khi chạy AI toàn lớp.','error');
             if(window.regularEvaluationRuntime.bulkRunning)return;
             if(!getGameGeminiApiKey())return showToast('Chưa cấu hình Gemini API.','error');
+            if(regularEvalKHDHCurrent()&&!window.KHDHParser.stats(regularEvalKHDHCurrent()).selected)return showToast('Hãy chọn ít nhất một bài KHDH làm trọng tâm trước khi chạy AI toàn lớp.','error');
             const students=regularEvalStudents();if(!students.length)return showToast('Danh sách học sinh đang trống.','error');
             const firstScan=regularEvalScanCompletion(students);
             const missingScores=firstScan.remaining.filter(item=>item.missingScoreGroups.length||regularEvalHasInvalidLevels(item.ev));
@@ -2486,241 +2475,212 @@ NGUYÊN TẮC BẮT BUỘC:
         };
         window.regularEvalGenerateMissing=function(){return window.regularEvalGenerateBulk(true);};
 
-        function regularEvalKHDHPrompt(){
-            const r=regularEvalState(),subject=regularEvalSubject();
-            return `Bạn là chuyên gia phân tích Kế hoạch dạy học/Giáo án tiểu học Việt Nam. Trích đúng CHỦ ĐIỂM, TÊN BÀI và KIẾN THỨC/KỸ NĂNG TRỌNG TÂM đã học của môn “${subject.name}”, khối ${r.settings.grade}, tháng ${r.settings.month}. Với mỗi bài, tóm tắt rất ngắn nội dung trọng tâm đủ cụ thể để AI viết nhận xét theo điểm; không bịa nội dung hoặc bài học ngoài tài liệu. Chỉ liệt kê gạch đầu dòng, bỏ hoạt động hành chính, bỏ nội dung của môn/tháng khác. Nếu không có dữ liệu phù hợp, trả đúng câu: “Không tìm thấy dữ liệu KHDH môn này trong tháng này.”`;
+        // KHDH – dữ liệu cây theo năm học / tháng / khối / lớp / môn, không sửa hồ sơ học sinh.
+        function regularEvalKHDHCurrent(){return regularEvalState().khdhParsedMap?.[regularEvalKhdhKey()]||null;}
+        function regularEvalKHDHSelectedPrompt(){
+            const r=regularEvalState(),structured=regularEvalKHDHCurrent();
+            return structured ? (window.KHDHParser?.selectedText(structured)||'') : String(r.khdhMap[regularEvalKhdhKey()]||'');
         }
-        function regularEvalFileToBase64(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||'').split(',')[1]||'');reader.onerror=reject;reader.readAsDataURL(file);});}
-        function regularEvalLoadScript(src,globalName){return new Promise((resolve,reject)=>{if(window[globalName])return resolve(window[globalName]);const s=document.createElement('script');s.src=src;s.onload=()=>resolve(window[globalName]);s.onerror=reject;document.body.appendChild(s);});}
-        async function regularEvalExtractDocumentText(file){
-            const lower=file.name.toLowerCase();
-            if(lower.endsWith('.docx')||lower.endsWith('.doc')){const mammoth=await regularEvalLoadScript('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js','mammoth');const ab=await file.arrayBuffer();return (await mammoth.extractRawText({arrayBuffer:ab})).value||'';}
-            if(/\.(xlsx|xls|csv)$/i.test(lower)){const XLSX=window.XLSX;if(!XLSX)throw new Error('Không tải được thư viện Excel.');const ab=await file.arrayBuffer();const wb=XLSX.read(ab,{type:'array'});return wb.SheetNames.map(name=>`--- Sheet ${name} ---\n${XLSX.utils.sheet_to_csv(wb.Sheets[name])}`).join('\n\n').slice(0,60000);}
-            return '';
-        }
-        window.regularEvalOpenKHDHFile = function(){document.getElementById('regular-eval-khdh-input')?.click();};
-        // === KHDH STRUCTURED TREE V2: data isolated per school-year / grade / class / month / subject ===
-        function regularKhdhMap(){const r=regularEvalState(); if(!r.khdhParsedMap||typeof r.khdhParsedMap!=='object'||Array.isArray(r.khdhParsedMap))r.khdhParsedMap={};return r.khdhParsedMap;}
-        function regularKhdhGet(key=regularEvalKhdhKey()){return regularKhdhMap()[key]||null;}
-        const regularKhdhUi={filterTerm:'all',filterWeek:'all',filterTopic:'all',selectedOnly:false,editing:false,open:{}};
-        function regularKhdhNorm(v){return String(v??'').replace(/[đĐ]/g,'d').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toLowerCase();}
-        function regularKhdhUid(prefix){return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,9)}`;}
-        function regularKhdhWeek(text){const m=String(text||'').match(/(?:tuần|tuan|week)\s*(\d{1,2})(?:\s*[-–—đến tới]+\s*(?:tuần\s*)?(\d{1,2}))?/i);return m?`Tuần ${m[1]}${m[2]?'-'+m[2]:''}`:'';}
-        function regularKhdhPeriods(text){const s=String(text||'');const m=s.match(/(?:số\s*tiết|so\s*tiet|thời\s*lượng|thoi\s*luong|tiết|tiet)\s*[:：]?\s*(\d{1,2})\b|\b(\d{1,2})\s*(?:tiết|tiet)\b/i);return m?Number(m[1]||m[2]):null;}
-        function regularKhdhNewTopic(title='',num=null){return {id:regularKhdhUid('topic'),title:String(title||'Chủ đề mới').trim(),topicNumber:Number.isInteger(num)?num:null,checked:false,lessons:[]};}
-        function regularKhdhNewLesson(title='',num=null,periodCount=null,weekLabel=''){return {id:regularKhdhUid('lesson'),title:String(title||'Bài mới').trim(),lessonNumber:Number.isInteger(num)?num:null,periodCount:Number.isInteger(periodCount)&&periodCount>=0?periodCount:null,weekLabel:String(weekLabel||'').trim(),focus:'',checked:false};}
-        function regularKhdhTopicMatch(line){const m=String(line).match(/(?:^|[|•\-]\s*)(?:chủ\s*đề|chu\s*de|chủ\s*điểm|chu\s*diem|mạch\s*nội\s*dung)\s*(\d{1,2})?\s*[:.\-–]?\s*(.{2,180})$/i);return m&&m[2]&&!/^(?:bài|bai)\s*\d+/i.test(m[2])?{number:m[1]?Number(m[1]):null,title:m[2].split('|')[0].trim()}:null;}
-        function regularKhdhLessonMatch(line){const m=String(line).match(/(?:^|[|•\-]\s*)(?:bài|bai)\s*(\d{1,3})\s*[:.\-–]?\s*(.{1,250})$/i);if(!m)return null;const raw=m[2].split('|')[0].trim();return {number:Number(m[1]),title:raw.replace(/\s*(?:\(?\d{1,2}\s*tiết\)?|số\s*tiết\s*[:：]?\s*\d+|tuần\s*\d+(?:\s*[-–]\s*\d+)?)\s*$/gi,'').trim()||raw};}
-        function regularKhdhParseText(text){
-            const topics=[];let current=null,last=null;
-            const addTopic=(title,num)=>{const existing=topics.find(t=>regularKhdhNorm(t.title)===regularKhdhNorm(title));current=existing||regularKhdhNewTopic(title,num);if(!existing)topics.push(current);last=null;};
-            const ensureTopic=()=>{if(!current)addTopic('Chưa xác định chủ đề',null);};
-            const lines=String(text||'').replace(/\r/g,'\n').replace(/\u00a0/g,' ').split(/\n+/).map(v=>v.trim()).filter(Boolean);
-            for(const line of lines.slice(0,12000)){
-                const segments=line.split('|').map(v=>v.trim()).filter(Boolean);
-                const topic=segments.map(regularKhdhTopicMatch).find(Boolean);
-                const lesson=segments.map(regularKhdhLessonMatch).find(Boolean)||regularKhdhLessonMatch(line);
-                if(topic){addTopic(topic.title,topic.number);if(!lesson)continue;}
-                if(lesson){ensureTopic();const item=regularKhdhNewLesson(lesson.title,lesson.number,regularKhdhPeriods(line),regularKhdhWeek(line));current.lessons.push(item);last=item;continue;}
-                if(last){const w=regularKhdhWeek(line);if(w&&!last.weekLabel)last.weekLabel=w;const p=regularKhdhPeriods(line);if(p!==null&&last.periodCount===null)last.periodCount=p;const focus=line.match(/^(?:nội dung trọng tâm|kiến thức|kỹ năng|kĩ năng|yêu cầu cần đạt|mục tiêu)\s*[:：-]\s*(.+)$/i);if(focus)last.focus=[last.focus,focus[1]].filter(Boolean).join('; ').slice(0,550);}
-                // A number-name row in nonstandard Word tables: week | lesson | periods.
-                if(current&&!lesson&&line.includes('|')){
-                    const cells=line.split('|').map(v=>v.trim()).filter(Boolean);
-                    const probable=cells.find(v=>v.length>4&&!/^\d+$/.test(v)&&!/(?:^tuần|^tiết|^chủ đề|^stt|^nội dung|^bài học)/i.test(v));
-                    if(probable&&cells.some(v=>/^\d{1,2}$/.test(v))&&!/^(?:thứ|ngày|môn|khối)/i.test(probable)){
-                        const item=regularKhdhNewLesson(probable,null,regularKhdhPeriods(line),regularKhdhWeek(line));current.lessons.push(item);last=item;
-                    }
-                }
+        function regularEvalKHDHCommit(){
+            const r=regularEvalState(),record=regularEvalKHDHCurrent();
+            if(record){
+                record.selectedLessonIds=record.topics.flatMap(t=>t.lessons.filter(l=>l.checked).map(l=>l.id));
+                record.topics.forEach(t=>{t.checked=t.lessons.length>0&&t.lessons.every(l=>l.checked);});
+                // Bảo đảm tương thích với AI sử dụng khdhMap ở phiên bản trước.
+                r.khdhMap[regularEvalKhdhKey()]=window.KHDHParser.selectedText(record);
             }
-            return topics.filter(t=>t.lessons.length>0||regularKhdhNorm(t.title)!=='chua xac dinh chu de');
-        }
-        function regularKhdhWorkbookSheets(workbook){
-            const matches=name=>regularEvalSubjectFromSheetName?.(name)?.id||null;
-            const recognized=workbook.SheetNames.filter(name=>matches(name));
-            if(!recognized.length)return workbook.SheetNames;
-            const active=regularEvalSubject().id;
-            const selected=recognized.filter(name=>matches(name)===active);
-            if(!selected.length)throw new Error(`File Excel KHDH chưa có Sheet cho môn ${regularEvalSubject().name}; không lấy dữ liệu của môn khác.`);
-            return selected;
-        }
-        function regularKhdhParseWorkbook(workbook){
-            const XLSX=window.XLSX,topics=[];const lookup=new Map();
-            const getTopic=(title,number)=>{const key=regularKhdhNorm(title||'Chưa xác định chủ đề');if(!lookup.has(key)){const t=regularKhdhNewTopic(title||'Chưa xác định chủ đề',number);lookup.set(key,t);topics.push(t);}return lookup.get(key);};
-            for(const sheetName of regularKhdhWorkbookSheets(workbook)){
-                const sheet=workbook.Sheets[sheetName];const rows=XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:false,blankrows:false});
-                let header=null,currentTitle='',currentNumber=null;
-                for(let i=0;i<rows.length;i++){
-                    const cells=(rows[i]||[]).map(v=>String(v??'').trim());if(!cells.some(Boolean))continue;
-                    const norms=cells.map(regularKhdhNorm);
-                    if(norms.some(v=>/^(?:ten )?bai(?: hoc| day)?$|^ten bai(?: hoc| day)?$|^noi dung bai(?: hoc)?$/.test(v)) && norms.some(v=>/(chu de|tuan|tiet|thoi luong|noi dung)/.test(v))){
-                        const col=patterns=>norms.findIndex(v=>patterns.some(p=>p.test(v)));
-                        header={topic:col([/^chu de/,/^chu diem/,/^mach noi dung/]),lesson:col([/^bai(?: hoc| day)?$/, /^ten bai/,/^noi dung bai/,/^ten noi dung/,/^bai hoc/]),week:col([/^tuan/,/^thoi gian/]),periods:col([/^so tiet/,/^tiet/,/^thoi luong/]),number:col([/^so bai/,/^bai so/]),focus:col([/^noi dung trong tam/,/^yeu cau can dat/,/^kien thuc/,/^ki nang/,/^ky nang/,/^muc tieu/])};continue;
-                    }
-                    const joined=cells.join(' | ');const matchTopic=cells.map(regularKhdhTopicMatch).find(Boolean);
-                    if(matchTopic){currentTitle=matchTopic.title;currentNumber=matchTopic.number;}
-                    if(header&&header.lesson>=0){
-                        const directTopic=header.topic>=0?cells[header.topic]:'';
-                        if(directTopic){const m=regularKhdhTopicMatch(directTopic);currentTitle=m?m.title:directTopic;currentNumber=m?m.number:null;}
-                        const ltext=cells[header.lesson]||'';
-                        if(!ltext||/^(?:bài|bai)\s*(?:học|hoc)?$/i.test(ltext))continue;
-                        const lm=regularKhdhLessonMatch(ltext);
-                        const title=lm?lm.title:ltext;
-                        if(title.length<2||/^(?:tổng|cộng|ghi chú|kiểm tra|học kì)$/i.test(title))continue;
-                        const rawPeriod=header.periods>=0?cells[header.periods]:'';
-                        const p=/^\d{1,2}$/.test(rawPeriod)?Number(rawPeriod):regularKhdhPeriods(rawPeriod||joined);
-                        const w=header.week>=0?cells[header.week]:'';
-                        const week=regularKhdhWeek(w)||(/^\d{1,2}(?:\s*[-–]\s*\d{1,2})?$/.test(w)?`Tuần ${w.replace(/\s/g,'')}`:'')||regularKhdhWeek(joined);
-                        const num=lm?.number||(header.number>=0&&/^\d+$/.test(cells[header.number])?Number(cells[header.number]):null);
-                        const item=regularKhdhNewLesson(title,num,p,week);item.focus=header.focus>=0?String(cells[header.focus]||'').slice(0,550):'';getTopic(currentTitle||sheetName,currentNumber).lessons.push(item);continue;
-                    }
-                    if(matchTopic)continue;
-                    const lm=cells.map(regularKhdhLessonMatch).find(Boolean);
-                    if(lm){const t=getTopic(currentTitle||sheetName,currentNumber);t.lessons.push(regularKhdhNewLesson(lm.title,lm.number,regularKhdhPeriods(joined),regularKhdhWeek(joined)));}
-                }
-            }
-            if(!topics.some(t=>t.lessons.length))return regularKhdhParseText(regularKhdhWorkbookSheets(workbook).map(s=>XLSX.utils.sheet_to_csv(workbook.Sheets[s])).join('\n'));
-            return topics;
-        }
-        function regularKhdhNormalizeTopics(topics){return (Array.isArray(topics)?topics:[]).slice(0,200).map(t=>({id:String(t.id||regularKhdhUid('topic')),title:String(t.title||'Chủ đề chưa đặt tên').slice(0,240),topicNumber:Number.isInteger(Number(t.topicNumber))&&t.topicNumber!==null?Number(t.topicNumber):null,checked:false,lessons:(Array.isArray(t.lessons)?t.lessons:[]).slice(0,700).map(l=>({id:String(l.id||regularKhdhUid('lesson')),title:String(l.title||'Bài chưa đặt tên').slice(0,250),lessonNumber:Number.isInteger(Number(l.lessonNumber))&&l.lessonNumber!==null?Number(l.lessonNumber):null,periodCount:l.periodCount!==null&&l.periodCount!==undefined&&/^\d+$/.test(String(l.periodCount))?Number(l.periodCount):null,weekLabel:String(l.weekLabel||'').slice(0,80),focus:String(l.focus||'').slice(0,550),checked:!!l.checked}))})).filter(t=>t.title||t.lessons.length);}
-        function regularKhdhSelectedText(key=regularEvalKhdhKey()){
-            const doc=regularKhdhGet(key);
-            if(!doc)return String(regularEvalState().khdhMap[key]||''); // old data compatible
-            return (doc.topics||[]).map(topic=>{
-                const lessons=(topic.lessons||[]).filter(l=>l.checked);
-                if(!lessons.length)return '';
-                return `Chủ đề${topic.topicNumber!=null?' '+topic.topicNumber:''}: ${topic.title}\n${lessons.map(l=>`- Bài${l.lessonNumber!=null?' '+l.lessonNumber:''}: ${l.title}${l.periodCount!=null?` (${l.periodCount} tiết)`:''}${l.weekLabel?` - ${l.weekLabel}`:''}${l.focus?`\n  Trọng tâm: ${l.focus}`:''}`).join('\n')}`;
-            }).filter(Boolean).join('\n').slice(0,11000);
-        }
-        function regularKhdhSave(doc,key=regularEvalKhdhKey()){
-            doc.topics=regularKhdhNormalizeTopics(doc.topics);
-            doc.selectedLessonIds=doc.topics.flatMap(t=>t.lessons.filter(l=>l.checked).map(l=>l.id));
-            regularKhdhMap()[key]=doc;
             saveData();
         }
-        function regularKhdhFind(topicId,lessonId){const doc=regularKhdhGet();const topic=doc?.topics.find(t=>t.id===topicId);return {doc,topic,lesson:lessonId?topic?.lessons.find(l=>l.id===lessonId):null};}
-        window.regularKhdhToggleTopic=(id,checked)=>{const {doc,topic}=regularKhdhFind(id);if(!topic)return;topic.lessons.forEach(l=>l.checked=!!checked);topic.checked=!!checked;regularKhdhSave(doc);renderLayout();};
-        window.regularKhdhToggleLesson=(tid,lid,checked)=>{const {doc,lesson}=regularKhdhFind(tid,lid);if(!lesson)return;lesson.checked=!!checked;regularKhdhSave(doc);renderLayout();};
-        window.regularKhdhToggleAll=(checked)=>{const doc=regularKhdhGet();if(!doc)return;doc.topics.forEach(t=>t.lessons.forEach(l=>l.checked=!!checked));regularKhdhSave(doc);renderLayout();};
-        window.regularKhdhToggleOpen=(tid)=>{regularKhdhUi.open[tid]=!(regularKhdhUi.open[tid]!==false);renderLayout();};
-        window.regularKhdhFilter=(key,value)=>{if(key==='filterTerm'||key==='filterWeek'||key==='filterTopic')regularKhdhUi[key]=String(value);else if(key==='selectedOnly')regularKhdhUi.selectedOnly=!!value;renderLayout();};
-        window.regularKhdhEditMode=()=>{regularKhdhUi.editing=!regularKhdhUi.editing;renderLayout();};
-        window.regularKhdhUpdate=(tid,lid,field,value)=>{
-            const {doc,topic,lesson}=regularKhdhFind(tid,lid);const target=lesson||topic;if(!target||!['title','lessonNumber','topicNumber','periodCount','weekLabel','focus'].includes(field))return;
-            if(['lessonNumber','topicNumber','periodCount'].includes(field))target[field]=String(value).trim()===''?null:(Number.isInteger(Number(value))&&Number(value)>=0?Number(value):null);
-            else target[field]=String(value||'').slice(0,field==='focus'?550:250);
-            regularKhdhSave(doc); // avoid render during input to preserve caret
+        function regularEvalKHDHFind(topicId,lessonId){
+            const record=regularEvalKHDHCurrent(),topic=record?.topics?.find(t=>t.id===topicId);
+            return {record,topic,lesson:topic?.lessons?.find(l=>l.id===lessonId)};
+        }
+        function regularEvalKHDHRepaint(){
+            const old=document.querySelector('#regular-eval-khdh-body');
+            if(old)old.outerHTML=regularEvalKHDHTreeHtml();
+        }
+        window.regularEvalKHDHToggleTopic=function(topicId,checked){
+            const {topic}=regularEvalKHDHFind(topicId);if(!topic)return;
+            topic.checked=!!checked;topic.lessons.forEach(l=>{l.checked=!!checked;});regularEvalKHDHCommit();regularEvalKHDHRepaint();
         };
-        window.regularKhdhAddTopic=()=>{const doc=regularKhdhGet()||{topics:[],rawText:'',sourceFile:'Tạo thủ công'};const t=regularKhdhNewTopic('Chủ đề mới');doc.topics.push(t);regularKhdhUi.open[t.id]=true;regularKhdhUi.editing=true;regularKhdhSave(doc);renderLayout();};
-        window.regularKhdhAddLesson=tid=>{const {doc,topic}=regularKhdhFind(tid);if(!topic)return;topic.lessons.push(regularKhdhNewLesson('Bài mới'));regularKhdhUi.open[tid]=true;regularKhdhUi.editing=true;regularKhdhSave(doc);renderLayout();};
-        window.regularKhdhDeleteLesson=(tid,lid)=>{const {doc,topic}=regularKhdhFind(tid,lid);if(!topic||!confirm('Xóa bài này khỏi dữ liệu KHDH đã nhận diện?'))return;topic.lessons=topic.lessons.filter(l=>l.id!==lid);regularKhdhSave(doc);renderLayout();};
-        window.regularKhdhDeleteTopic=tid=>{const {doc,topic}=regularKhdhFind(tid);if(!topic||!confirm('Xóa chủ đề và toàn bộ bài bên trong?'))return;doc.topics=doc.topics.filter(t=>t.id!==tid);regularKhdhSave(doc);renderLayout();};
-        function regularKhdhWeekNo(value){return Number(String(value||'').match(/(?:tuần|tuan)\s*(\d+)/i)?.[1]||0);}
-        function regularKhdhTerm(lesson){const n=regularKhdhWeekNo(lesson.weekLabel);return n?(n<=18?'1':'2'):'';}
-        function regularKhdhTreeHtml(){
-            const doc=regularKhdhGet(),key=regularEvalKhdhKey();const topics=doc?.topics||[];
-            const total=topics.reduce((n,t)=>n+t.lessons.length,0),chosen=topics.reduce((n,t)=>n+t.lessons.filter(l=>l.checked).length,0);
-            const allWeeks=[...new Set(topics.flatMap(t=>t.lessons.map(l=>l.weekLabel).filter(Boolean)))].sort((a,b)=>regularKhdhWeekNo(a)-regularKhdhWeekNo(b));
-            const sel=(v,k)=>regularKhdhUi[k]===String(v)?'selected':'';
-            const content=topics.filter(t=>regularKhdhUi.filterTopic==='all'||regularKhdhUi.filterTopic===t.id).map(topic=>{
-                const lessons=topic.lessons.filter(l=>(regularKhdhUi.filterTerm==='all'||!regularKhdhTerm(l)||regularKhdhTerm(l)===regularKhdhUi.filterTerm)&&(regularKhdhUi.filterWeek==='all'||l.weekLabel===regularKhdhUi.filterWeek)&&(!regularKhdhUi.selectedOnly||l.checked));
-                if(!lessons.length&&regularKhdhUi.selectedOnly)return '';
-                const marked=topic.lessons.filter(l=>l.checked).length,all=!!topic.lessons.length&&marked===topic.lessons.length,partial=marked>0&&!all;
-                const totalPeriods=topic.lessons.reduce((sum,l)=>sum+(l.checked?Number(l.periodCount)||0:0),0);
-                const open=regularKhdhUi.open[topic.id]!==false;
-                const topicEdit=regularKhdhUi.editing?`<div class="regular-khdh-editline"><input aria-label="Tên chủ đề" value="${escapeHtmlAttr(topic.title)}" oninput="regularKhdhUpdate('${escapeInlineJs(topic.id)}',null,'title',this.value)"><input type="number" min="0" aria-label="Số chủ đề" value="${topic.topicNumber??''}" placeholder="Số CĐ" onchange="regularKhdhUpdate('${escapeInlineJs(topic.id)}',null,'topicNumber',this.value)"><button type="button" onclick="regularKhdhDeleteTopic('${escapeInlineJs(topic.id)}')" title="Xóa chủ đề">Xóa chủ đề</button></div>`:'';
-                return `<div class="regular-khdh-topic"><div class="regular-khdh-topic-header"><button type="button" class="regular-khdh-expander" onclick="regularKhdhToggleOpen('${escapeInlineJs(topic.id)}')" aria-label="${open?'Thu gọn':'Mở rộng'} chủ đề">${open?'▾':'▸'}</button><input type="checkbox" data-khdh-partial="${partial?'1':'0'}" aria-checked="${partial?'mixed':all?'true':'false'}" ${all?'checked':''} onchange="regularKhdhToggleTopic('${escapeInlineJs(topic.id)}',this.checked)"><b>${topic.topicNumber!==null?'Chủ đề '+topic.topicNumber+': ':''}${mfgEsc(topic.title)}</b><span class="regular-khdh-chip">${marked}/${topic.lessons.length} bài</span><span class="regular-khdh-chip">${totalPeriods} tiết chọn</span></div>${topicEdit}${open?`<div class="regular-khdh-lessons">${lessons.map(l=>{
-                    const edit=regularKhdhUi.editing?`<div class="regular-khdh-editline"><input aria-label="Tên bài" value="${escapeHtmlAttr(l.title)}" oninput="regularKhdhUpdate('${escapeInlineJs(topic.id)}','${escapeInlineJs(l.id)}','title',this.value)"><input type="number" min="0" value="${l.lessonNumber??''}" aria-label="Số bài" placeholder="Số bài" onchange="regularKhdhUpdate('${escapeInlineJs(topic.id)}','${escapeInlineJs(l.id)}','lessonNumber',this.value)"><input type="number" min="0" value="${l.periodCount??''}" aria-label="Số tiết" placeholder="Số tiết" onchange="regularKhdhUpdate('${escapeInlineJs(topic.id)}','${escapeInlineJs(l.id)}','periodCount',this.value)"><input value="${escapeHtmlAttr(l.weekLabel)}" aria-label="Tuần" placeholder="Tuần 1-2" onchange="regularKhdhUpdate('${escapeInlineJs(topic.id)}','${escapeInlineJs(l.id)}','weekLabel',this.value)"><input class="regular-khdh-focus" value="${escapeHtmlAttr(l.focus||'')}" aria-label="Kiến thức kỹ năng trọng tâm của bài" placeholder="Kiến thức/kỹ năng trọng tâm (nếu có)" oninput="regularKhdhUpdate('${escapeInlineJs(topic.id)}','${escapeInlineJs(l.id)}','focus',this.value)"><button type="button" onclick="regularKhdhDeleteLesson('${escapeInlineJs(topic.id)}','${escapeInlineJs(l.id)}')" title="Xóa bài">Xóa bài</button></div>`:'';
-                    return `<div class="regular-khdh-lesson ${l.checked?'is-selected':''}"><label class="regular-khdh-lesson-label"><input type="checkbox" ${l.checked?'checked':''} onchange="regularKhdhToggleLesson('${escapeInlineJs(topic.id)}','${escapeInlineJs(l.id)}',this.checked)"><span>${l.lessonNumber!==null?'Bài '+l.lessonNumber+': ':''}${mfgEsc(l.title)}</span></label><div class="regular-khdh-lesson-meta">${l.periodCount!==null?`<span class="regular-khdh-chip">${l.periodCount} tiết</span>`:''}${l.weekLabel?`<span class="regular-khdh-chip week">${mfgEsc(l.weekLabel)}</span>`:''}</div>${l.focus?`<div class="regular-khdh-focus-summary">${mfgEsc(l.focus)}</div>`:''}${edit}</div>`;
-                }).join('')||'<p class="regular-khdh-none">Không có bài phù hợp bộ lọc.</p>'}${regularKhdhUi.editing?`<button type="button" class="regular-khdh-link" onclick="regularKhdhAddLesson('${escapeInlineJs(topic.id)}')">+ Thêm bài</button>`:''}</div>`:''}</div>`;
+        window.regularEvalKHDHToggleLesson=function(topicId,lessonId,checked){
+            const {topic,lesson}=regularEvalKHDHFind(topicId,lessonId);if(!lesson)return;
+            lesson.checked=!!checked;topic.checked=topic.lessons.every(l=>l.checked);regularEvalKHDHCommit();regularEvalKHDHRepaint();
+        };
+        window.regularEvalKHDHExpand=function(topicId){
+            const rt=window.regularEvaluationRuntime;rt.khdhCollapsed=rt.khdhCollapsed||{};
+            const key=regularEvalKhdhKey()+'|'+topicId;rt.khdhCollapsed[key]=!rt.khdhCollapsed[key];regularEvalKHDHRepaint();
+        };
+        window.regularEvalKHDHFilter=function(name,value){
+            const rt=window.regularEvaluationRuntime;
+            rt.khdhFilters=rt.khdhFilters||{};rt.khdhFilters[regularEvalKhdhKey()]=rt.khdhFilters[regularEvalKhdhKey()]||{};
+            rt.khdhFilters[regularEvalKhdhKey()][name]=value;regularEvalKHDHRepaint();
+        };
+        window.regularEvalKHDHSetEdit=function(enabled){
+            window.regularEvaluationRuntime.khdhEditing=!!enabled;regularEvalKHDHRepaint();
+        };
+        window.regularEvalKHDHEdit=function(kind,topicId,lessonId,field,value){
+            const item=regularEvalKHDHFind(topicId,lessonId);const target=kind==='topic'?item.topic:item.lesson;
+            if(!target)return;
+            if(field==='title')target.title=String(value||'').trim().slice(0,300)||'Chưa đặt tên';
+            else if(field==='periodCount'||field==='lessonNumber'||field==='topicNumber'){
+                const n=String(value||'').trim();target[field]=n&&Number.isInteger(Number(n))&&Number(n)>=0?Number(n):undefined;
+            }else if(field==='weekLabel')target.weekLabel=String(value||'').trim().slice(0,40);
+            else if(field==='focus')target.focus=String(value||'').trim().slice(0,350);
+            regularEvalKHDHCommit();regularEvalKHDHRepaint();
+        };
+        window.regularEvalKHDHAddTopic=function(){
+            const record=regularEvalKHDHCurrent();if(!record)return;
+            const id='topic-'+Date.now()+'-'+Math.random().toString(36).slice(2,5);
+            record.topics.push({id,title:'Chủ đề mới',checked:false,lessons:[]});window.regularEvaluationRuntime.khdhEditing=true;
+            regularEvalKHDHCommit();regularEvalKHDHRepaint();
+        };
+        window.regularEvalKHDHAddLesson=function(topicId){
+            const {record,topic}=regularEvalKHDHFind(topicId);if(!topic)return;
+            topic.lessons.push({id:'lesson-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),title:'Bài học mới',checked:true,weekLabel:''});
+            window.regularEvaluationRuntime.khdhEditing=true;regularEvalKHDHCommit();regularEvalKHDHRepaint();
+        };
+        window.regularEvalKHDHRemove=function(kind,topicId,lessonId){
+            const {record,topic}=regularEvalKHDHFind(topicId,lessonId);if(!record||!topic)return;
+            if(!confirm(kind==='topic'?'Xóa chủ đề và các bài bên trong?':'Xóa bài này khỏi KHDH đã nhận diện?'))return;
+            if(kind==='topic')record.topics=record.topics.filter(t=>t.id!==topicId);
+            else topic.lessons=topic.lessons.filter(l=>l.id!==lessonId);
+            regularEvalKHDHCommit();regularEvalKHDHRepaint();
+        };
+        function regularEvalKHDHMatchWeek(label,filter){
+            if(!filter)return true;
+            const match=String(label||'').match(/\d{1,2}(?:\s*[-–]\s*\d{1,2})?/);
+            if(!match)return false;
+            const parts=match[0].split(/\s*[-–]\s*/).map(Number);
+            const n=Number(filter);return n>=parts[0]&&n<=(parts[1]??parts[0]);
+        }
+        function regularEvalKHDHTreeHtml(){
+            const rec=regularEvalKHDHCurrent(),old=regularEvalState().khdhMap[regularEvalKhdhKey()]||'';
+            if(!rec)return `<div id="regular-eval-khdh-body"><div class="khdh-empty"><b>Chưa có dữ liệu KHDH dạng cây</b><p>Nhập PDF, Word hoặc Excel để nhận diện Chủ đề → Bài → Tiết → Tuần. KHDH dạng văn bản cũ vẫn được bảo toàn bên dưới.</p></div><details class="khdh-legacy" ${old?'open':''}><summary>Nhập/chỉnh sửa KHDH dạng văn bản</summary><textarea maxlength="4000" oninput="regularEvalUpdateKHDH(this.value)" placeholder="Nhập bài/chủ đề thủ công...">${mfgEsc(old)}</textarea><div class="khdh-tools"><button type="button" class="regular-eval-btn indigo" onclick="regularEvalKHDHConvertLegacy()">Chuyển văn bản thành cây</button></div></details></div>`;
+            // Native partial-selection state for topic checkboxes, after DOM render.
+            setTimeout(()=>{document.querySelectorAll('[data-khdh-topic-checkbox]').forEach(box=>{
+                const t=regularEvalKHDHCurrent()?.topics?.find(item=>item.id===box.dataset.khdhTopicCheckbox);
+                if(t){const chosen=t.lessons.filter(l=>l.checked).length;box.indeterminate=chosen>0&&chosen<t.lessons.length;}
+            });},0);
+            const stats=window.KHDHParser.stats(rec),rt=window.regularEvaluationRuntime,collapsed=rt.khdhCollapsed||{},editing=!!rt.khdhEditing;
+            const filters=rt.khdhFilters?.[regularEvalKhdhKey()]||{};
+            const weekOptions=[...new Set(rec.topics.flatMap(t=>t.lessons.flatMap(l=>{
+                const m=String(l.weekLabel||'').match(/\d{1,2}(?:\s*[-–]\s*\d{1,2})?/);if(!m)return [];
+                const a=m[0].split(/\s*[-–]\s*/).map(Number);const b=a[1]??a[0];return Array.from({length:Math.min(52,Math.max(0,b-a+1))},(_,i)=>a[0]+i);
+            })))].sort((a,b)=>a-b);
+            const sel=(label,key,options)=>`<label>${label}<select class="regular-eval-input" onchange="regularEvalKHDHFilter('${key}',this.value)"><option value="">Tất cả</option>${options.map(([v,t])=>`<option value="${escapeHtmlAttr(v)}" ${String(filters[key]||'')===String(v)?'selected':''}>${mfgEsc(t)}</option>`).join('')}</select></label>`;
+            const semester=(l)=>{const m=String(l.weekLabel||'').match(/\d+/);return m?(Number(m[0])<=18?'1':'2'):'';};
+            const topics=rec.topics.filter(t=>!filters.topic||t.id===filters.topic).map(t=>{
+                const visible=t.lessons.filter(l=>(!filters.week||regularEvalKHDHMatchWeek(l.weekLabel,filters.week))&&(!filters.semester||semester(l)===filters.semester)&&(!filters.checked||l.checked));
+                if(!visible.length&&!!(filters.week||filters.semester||filters.checked))return '';
+                const selected=t.lessons.filter(l=>l.checked).length,total=t.lessons.length,periods=t.lessons.reduce((sum,l)=>sum+(l.checked?Number(l.periodCount)||0:0),0);
+                const close=!!collapsed[regularEvalKhdhKey()+'|'+t.id];
+                const editTopic=editing?`<div class="khdh-edit-grid"><label>Tên chủ đề<input value="${escapeHtmlAttr(t.title)}" onchange="regularEvalKHDHEdit('topic','${t.id}',null,'title',this.value)"></label><label>STT chủ đề<input type="number" min="1" value="${t.topicNumber||''}" onchange="regularEvalKHDHEdit('topic','${t.id}',null,'topicNumber',this.value)"></label><button type="button" class="khdh-delete" onclick="regularEvalKHDHRemove('topic','${t.id}')">Xóa chủ đề</button></div>`:'';
+                const rows=close?'':visible.map(l=>{
+                    const lessonNo=l.lessonNumber?'Bài '+l.lessonNumber+': ':'';
+                    const editLesson=editing?`<div class="khdh-edit-grid"><label>Tên bài<input value="${escapeHtmlAttr(l.title)}" onchange="regularEvalKHDHEdit('lesson','${t.id}','${l.id}','title',this.value)"></label><label>Số bài<input type="number" min="1" value="${l.lessonNumber||''}" onchange="regularEvalKHDHEdit('lesson','${t.id}','${l.id}','lessonNumber',this.value)"></label><label>Số tiết<input type="number" min="0" value="${l.periodCount??''}" onchange="regularEvalKHDHEdit('lesson','${t.id}','${l.id}','periodCount',this.value)"></label><label>Tuần<input value="${escapeHtmlAttr(l.weekLabel||'')}" onchange="regularEvalKHDHEdit('lesson','${t.id}','${l.id}','weekLabel',this.value)"></label><label>Kiến thức/kỹ năng trọng tâm<input value="${escapeHtmlAttr(l.focus||'')}" onchange="regularEvalKHDHEdit('lesson','${t.id}','${l.id}','focus',this.value)"></label><button type="button" class="khdh-delete" onclick="regularEvalKHDHRemove('lesson','${t.id}','${l.id}')">Xóa bài</button></div>`:'';
+                    return `<div class="khdh-lesson ${l.checked?'selected':''}"><label class="khdh-lesson-checkbox"><input type="checkbox" ${l.checked?'checked':''} onchange="regularEvalKHDHToggleLesson('${t.id}','${l.id}',this.checked)"><span class="khdh-lesson-title">${mfgEsc(lessonNo+l.title)}</span></label><div class="khdh-badges">${l.periodCount!==undefined?`<span class="khdh-badge">${l.periodCount} tiết</span>`:''}${l.weekLabel?`<span class="khdh-badge week">${mfgEsc(l.weekLabel)}</span>`:''}</div>${editLesson}</div>`;
+                }).join('');
+                return `<div class="khdh-topic"><div class="khdh-topic-head"><button type="button" class="khdh-expand" aria-label="Mở rộng hoặc thu gọn" onclick="regularEvalKHDHExpand('${t.id}')"><i class="ph-bold ${close?'ph-caret-right':'ph-caret-down'}"></i></button><label class="khdh-topic-label"><input type="checkbox" data-khdh-topic-checkbox="${t.id}" ${total>0&&selected===total?'checked':''} onchange="regularEvalKHDHToggleTopic('${t.id}',this.checked)"><strong>${mfgEsc((t.topicNumber?'Chủ đề '+t.topicNumber+': ':'Chủ đề: ')+t.title)}</strong></label><div class="khdh-badges"><span class="khdh-badge">${selected}/${total} bài</span><span class="khdh-badge week">${periods} tiết đã chọn</span></div></div>${close?'':`<div class="khdh-topic-body">${editTopic}${rows||'<p class="khdh-muted">Chưa có bài phù hợp bộ lọc.</p>'}${editing?`<button type="button" class="khdh-add" onclick="regularEvalKHDHAddLesson('${t.id}')">+ Thêm bài</button>`:''}</div>`}</div>`;
             }).join('');
-            const legacy=String(regularEvalState().khdhMap[key]||'');
-            const layout=`<div class="regular-khdh-tree"><div class="regular-khdh-top"><div><h3>Chọn chủ đề trọng tâm</h3><p>${doc?`Đã nhận diện ${topics.length} chủ đề, ${total} bài · Đã chọn ${chosen} bài${doc.sourceFile?' · '+mfgEsc(doc.sourceFile):''}`:'Hãy nhập PDF, Word hoặc Excel để nhận diện chủ đề, bài, tiết và tuần.'}</p></div><div class="regular-khdh-buttons"><button type="button" class="regular-khdh-link" onclick="regularKhdhAddTopic()">+ Thêm chủ đề</button><button type="button" class="regular-khdh-link" onclick="regularKhdhEditMode()">${regularKhdhUi.editing?'✓ Xong chỉnh sửa':'✎ Chỉnh sửa dữ liệu KHDH đã nhận diện'}</button></div></div>${doc?.warnings?.length?`<div class="regular-khdh-warning">${mfgEsc(doc.warnings.join(' · '))}</div>`:''}${doc?`<div class="regular-khdh-filters"><label>Lọc theo kỳ <select onchange="regularKhdhFilter('filterTerm',this.value)"><option value="all">Tất cả</option><option value="1" ${sel('1','filterTerm')}>Kỳ I</option><option value="2" ${sel('2','filterTerm')}>Kỳ II</option></select></label><label>Lọc theo tuần <select onchange="regularKhdhFilter('filterWeek',this.value)"><option value="all">Tất cả tuần</option>${allWeeks.map(w=>`<option ${sel(w,'filterWeek')} value="${escapeHtmlAttr(w)}">${mfgEsc(w)}</option>`).join('')}</select></label><label>Lọc theo chủ đề <select onchange="regularKhdhFilter('filterTopic',this.value)"><option value="all">Tất cả chủ đề</option>${topics.map(t=>`<option ${sel(t.id,'filterTopic')} value="${escapeHtmlAttr(t.id)}">${mfgEsc(t.title)}</option>`).join('')}</select></label><label class="regular-khdh-filter-check"><input type="checkbox" ${regularKhdhUi.selectedOnly?'checked':''} onchange="regularKhdhFilter('selectedOnly',this.checked)"> Chỉ bài đã chọn</label><button type="button" class="regular-khdh-link" onclick="regularKhdhToggleAll(true)">Chọn tất cả</button><button type="button" class="regular-khdh-link" onclick="regularKhdhToggleAll(false)">Bỏ chọn tất cả</button></div>${content||'<p class="regular-khdh-none">Chưa có chủ đề phù hợp bộ lọc; có thể thêm chủ đề/bài thủ công.</p>'}<div class="regular-khdh-summary">AI sẽ chỉ dùng <strong>${chosen} bài đã chọn</strong>. Nếu chưa chọn bài nào, AI không sử dụng toàn bộ văn bản KHDH thô.</div>`:''}<details class="regular-khdh-legacy"><summary>Văn bản KHDH tham chiếu / nhập thủ công (dữ liệu cũ được giữ nguyên)</summary><textarea maxlength="4000" oninput="regularEvalUpdateKHDH(this.value)" placeholder="Có thể nhập KHDH dạng văn bản nếu chưa tải file…">${mfgEsc(legacy)}</textarea></details></div>`;
-            queueMicrotask(()=>{document.querySelectorAll('.regular-khdh-topic input[data-khdh-partial="1"]').forEach(e=>{e.indeterminate=true;});});
-            return layout;
+            const warnings=(rec.warnings||[]).length?`<div class="khdh-warning">${mfgEsc(rec.warnings.join(' · '))}</div>`:'';
+            return `<div id="regular-eval-khdh-body"><div class="khdh-toolbar-top"><div><h3>Chọn chủ đề trọng tâm</h3><p>${mfgEsc(rec.fileName||'KHDH đã lưu')} · ${stats.topics} chủ đề, ${stats.lessons} bài · <b>${stats.selected} bài đã chọn</b></p></div><button type="button" class="regular-eval-btn ${editing?'indigo':'gray'}" onclick="regularEvalKHDHSetEdit(${editing?'false':'true'})">${editing?'✓ Hoàn tất chỉnh sửa':'✎ Chỉnh sửa dữ liệu KHDH đã nhận diện'}</button></div><div class="khdh-filter-grid">${sel('Lọc theo kỳ','semester',[['1','Học kỳ I (tuần 1–18)'],['2','Học kỳ II (từ tuần 19)']])}${sel('Lọc theo tuần','week',weekOptions.map(w=>[String(w),'Tuần '+w]))}${sel('Lọc theo chủ đề','topic',rec.topics.map(t=>[t.id,t.title]))}${sel('Bài đã chọn','checked',[['1','Chỉ bài đã chọn']])}</div>${warnings}${topics||'<p class="khdh-muted">Không có bài phù hợp bộ lọc hiện tại.</p>'}${editing?'<button type="button" class="khdh-add" onclick="regularEvalKHDHAddTopic()">+ Thêm chủ đề</button>':''}<details class="khdh-legacy"><summary>Xem nội dung AI sẽ sử dụng (${stats.selected} bài)</summary><pre>${mfgEsc(window.KHDHParser.selectedText(rec)||'Chưa chọn bài nào.')}</pre></details><details class="khdh-legacy"><summary>Xem văn bản nguồn (chỉ tham khảo)</summary><pre>${mfgEsc((rec.originalText||'').slice(0,30000)||'Không có văn bản nguồn trích xuất.')}</pre></details></div>`;
         }
-        async function regularKhdhPdfText(file){
+        window.regularEvalKHDHConvertLegacy=function(){
+            const key=regularEvalKhdhKey(),r=regularEvalState(),source=r.khdhMap[key]||'';
+            if(!source.trim())return showToast('Hãy nhập văn bản KHDH trước.','error');
+            const parsed=window.KHDHParser.parseText(source);
+            if(!window.KHDHParser.stats(parsed).lessons)return showToast('Chưa nhận diện được bài học. Vui lòng ghi theo dạng Chủ đề 1: ... và Bài 1: ... trước khi chuyển.','error');
+            r.khdhParsedMap[key]={...parsed,originalText:source,fileName:'KHDH nhập thủ công',importedAt:new Date().toISOString(),selectedLessonIds:[]};
+            regularEvalKHDHCommit();renderLayout();showToast(`Đã nhận diện ${parsed.topics.length} chủ đề, ${window.KHDHParser.stats(parsed).lessons} bài.`,'success');
+        };
+        function regularEvalKHDHPrompt(){
+            const r=regularEvalState(),subject=regularEvalSubject();
+            return `Bạn đọc KHDH của môn ${subject.name}, khối ${r.settings.grade}. CHỈ trích các nội dung có trong tài liệu.\nVới mỗi mục ghi một dòng theo một trong các dạng:\nChủ đề 1: Tên chủ đề\nBài 1: Tên bài - 3 tiết - Tuần 1-1\nBài 2: Tên bài - 2 tiết - Tuần 2\nKhông suy diễn số tiết/tuần nếu tài liệu không có. Không tóm tắt thành câu chung, không thêm kiến thức ngoài file.`;
+        }
+        function regularEvalFileToBase64(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||'').split(',')[1]||'');reader.onerror=reject;reader.readAsDataURL(file);});}
+        function regularEvalLoadScript(src,globalName){return new Promise((resolve,reject)=>{if(window[globalName])return resolve(window[globalName]);const s=document.createElement('script');s.src=src;s.onload=()=>window[globalName]?resolve(window[globalName]):reject(new Error('Không khởi tạo được thư viện '+globalName));s.onerror=reject;document.body.appendChild(s);});}
+        async function regularEvalExtractKHDHPdf(file){
             const pdfjs=await regularEvalLoadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js','pdfjsLib');
-            if(!pdfjs?.getDocument)throw new Error('Không tải được thư viện PDF.js.');
             pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-            const pdf=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
-            const lines=[];
-            for(let p=1;p<=Math.min(pdf.numPages,150);p++){
-                const page=await pdf.getPage(p),content=await page.getTextContent();const items=content.items.filter(x=>x.str?.trim()).map(x=>({str:x.str.trim(),x:x.transform[4],y:x.transform[5],width:x.width||0}));
-                items.sort((a,b)=>Math.abs(a.y-b.y)>3?b.y-a.y:a.x-b.x);
-                let current=[],lastY=null;
-                for(const it of items){if(lastY!==null&&Math.abs(lastY-it.y)>3){if(current.length)lines.push(current.map((x,i)=>i&&x.x-(current[i-1].x+current[i-1].width)>30?' | '+x.str:' '+x.str).join('').trim());current=[];}current.push(it);lastY=it.y;}
-                if(current.length)lines.push(current.map((x,i)=>i&&x.x-(current[i-1].x+current[i-1].width)>30?' | '+x.str:' '+x.str).join('').trim());
-                if(lines.join('\n').length>120000)break;
+            const doc=await pdfjs.getDocument({data:await file.arrayBuffer()}).promise;const lines=[];const maxPages=Math.min(doc.numPages,120);
+            for(let i=1;i<=maxPages;i++){
+                const page=await doc.getPage(i),content=await page.getTextContent(),groups=new Map();
+                for(const item of content.items){const str=String(item.str||'').trim();if(!str)continue;
+                    const y=Math.round((item.transform?.[5]||0)/3)*3;
+                    if(!groups.has(y))groups.set(y,[]);
+                    groups.get(y).push({x:Number(item.transform?.[4]||0),str});
+                }
+                for(const [,parts] of [...groups].sort((a,b)=>b[0]-a[0]))lines.push(parts.sort((a,b)=>a.x-b.x).map(x=>x.str).join(' '));
+                if(lines.join('\n').length>180000)break;
             }
-            return lines.join('\n').slice(0,125000);
+            return {text:lines.join('\n').slice(0,180000),warnings:doc.numPages>maxPages?['Tài liệu có nhiều hơn 120 trang, chỉ đọc 120 trang đầu.']:[]};
         }
-        async function regularKhdhDocument(file){
-            const ext=file.name.toLowerCase();
-            if(/\.(xlsx|xls|csv)$/.test(ext)){
-                const XLSX=await regularEvalEnsureXLSX(),wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:false});
-                return {rawText:regularKhdhWorkbookSheets(wb).map(s=>`--- ${s} ---\n${XLSX.utils.sheet_to_csv(wb.Sheets[s])}`).join('\n').slice(0,70000),topics:regularKhdhParseWorkbook(wb)};
-            }
-            if(/\.docx$/.test(ext)){
+        async function regularEvalExtractKHDHWord(file){
+            if(/\.docx$/i.test(file.name)){
                 const mammoth=await regularEvalLoadScript('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js','mammoth');
-                const html=(await mammoth.convertToHtml({arrayBuffer:await file.arrayBuffer()})).value||'';
-                const dom=new DOMParser().parseFromString(html,'text/html');
-                const lines=[...dom.body.querySelectorAll('h1,h2,h3,h4,p,tr,li')].filter(el=>!el.closest('tr')||el.tagName==='TR').map(el=>el.tagName==='TR'?[...el.querySelectorAll('th,td')].map(c=>c.textContent.trim()).join(' | '):el.textContent.trim()).filter(Boolean);
-                const rawText=lines.join('\n').slice(0,125000);return {rawText,topics:regularKhdhParseText(rawText)};
+                const ab=await file.arrayBuffer(),html=(await mammoth.convertToHtml({arrayBuffer:ab})).value;
+                const root=new DOMParser().parseFromString(html,'text/html');
+                const rows=[...root.querySelectorAll('table tr')].map(tr=>[...tr.querySelectorAll('th,td')].map(td=>td.textContent.trim()));
+                const paragraphs=[...root.querySelectorAll('p,h1,h2,h3,h4')].filter(el=>!el.closest('table')).map(el=>el.textContent.trim()).filter(Boolean);
+                const table=rows.length?window.KHDHParser.parseExcelSheets([{name:'Word',rows}]):{topics:[],warnings:[]};
+                const text=paragraphs.join('\n')+'\n'+rows.map(r=>r.join(' | ')).join('\n');
+                return {text,table,warnings:[]};
             }
-            if(/\.pdf$/.test(ext)){const rawText=await regularKhdhPdfText(file);return {rawText,topics:regularKhdhParseText(rawText)};}
-            if(/\.doc$/.test(ext)){ // Support RTF/HTML Word .doc variants; binary OLE needs AI/document conversion.
-                const bytes=new Uint8Array(await file.arrayBuffer());const probe=new TextDecoder('windows-1258').decode(bytes);
-                if(/^\s*<(!doctype|html)/i.test(probe)){const dom=new DOMParser().parseFromString(probe,'text/html');const rawText=dom.body.textContent||'';return {rawText,topics:regularKhdhParseText(rawText)};}
-                if(/^\s*\{\\rtf/i.test(probe)){const rawText=probe.replace(/\\u(-?\d+)\??/g,(_,n)=>String.fromCharCode((Number(n)+65536)%65536)).replace(/\\[a-z]+-?\d* ?/gi,' ').replace(/[{}]/g,' ').replace(/\s+/g,' ');return {rawText,topics:regularKhdhParseText(rawText)};}
-                return {rawText:'',topics:[],legacyWord:true};
-            }
-            throw new Error('Chỉ hỗ trợ PDF, DOC, DOCX, XLS, XLSX.');
+            // DOC (OLE 97-2003) is a legacy binary format; try best-effort readable strings.
+            const bytes=new Uint8Array(await file.arrayBuffer());
+            let utf16='';for(let i=0;i+1<bytes.length;i+=2){const code=bytes[i]|bytes[i+1]<<8;utf16+=code>=32&&code<0xFFF0?String.fromCharCode(code):'\n';}
+            let plain='';try{plain=new TextDecoder('windows-1252').decode(bytes);}catch{}
+            const lines=[...utf16.split(/\n+/),...plain.split(/[\r\n\x00]+/)].map(x=>x.trim()).filter(x=>x.length>4&&x.length<300&&/(?:b[aà]i|ch[uủ]\s*[đd][eề]|tu[ầa]n|ti[eế]t)/i.test(x));
+            return {text:lines.join('\n').slice(0,150000),warnings:['File .doc cũ có thể bị mất cấu trúc bảng/tiếng Việt; nên chuyển sang .docx nếu nội dung chưa đúng.']};
         }
-        function regularKhdhAiJson(text){const input=String(text||'').trim().replace(/^```(?:json)?\s*|\s*```$/gi,'');let obj;try{obj=JSON.parse(input);}catch{const m=input.match(/\{[\s\S]*\}/);if(m)try{obj=JSON.parse(m[0]);}catch{}}return regularKhdhNormalizeTopics(obj?.topics||obj?.chuDe||obj);}
-        async function regularKhdhAiFallback(file,rawText){
-            const apiKey=getGameGeminiApiKey();if(!apiKey)throw new Error('Chưa cấu hình Gemini API để đọc tài liệu dạng ảnh hoặc .doc cũ.');
-            const prompt=`Đọc KHDH và TRÍCH XUẤT ĐÚNG dữ liệu có trong tài liệu. Không suy đoán, không thêm bài chưa có. Trả DUY NHẤT JSON theo dạng {"topics":[{"title":"Tên chủ đề","topicNumber":1,"lessons":[{"title":"Tên bài","lessonNumber":1,"periodCount":3,"weekLabel":"Tuần 1-2"}]}]}. Các trường không rõ đặt null hoặc chuỗi rỗng. Giữ nguyên tiếng Việt và tất cả bài nhận diện được; không giới hạn theo tháng, vì giáo viên sẽ tự chọn trọng tâm.`;
-            const isBinary=/\.(pdf|doc)$/i.test(file.name);
-            let response;
-            if(isBinary){const mime=/\.doc$/i.test(file.name)?'application/msword':'application/pdf';response=await callGeminiDirectFallback({action:'regular-evaluation-khdh',prompt,parts:[{inlineData:{mimeType:mime,data:await regularEvalFileToBase64(file)}},{text:prompt}]},apiKey);}
-            else response=await callGameGeminiApi({action:'regular-evaluation-khdh',prompt,documentText:String(rawText).slice(0,52000)});
-            return regularKhdhAiJson(response?.text||'');
-        }
+        window.regularEvalOpenKHDHFile=function(){document.getElementById('regular-eval-khdh-input')?.click();};
         window.regularEvalHandleKHDHFile=async function(input){
             const file=input?.files?.[0];if(!file)return;
-            const key=regularEvalKhdhKey();const warnings=[];
+            const ctx=regularEvalKhdhKey();const type=file.name.toLowerCase();
+            if(!/\.(pdf|doc|docx|xls|xlsx)$/i.test(type)){showToast('Chỉ chấp nhận KHDH PDF, Word hoặc Excel.','error');input.value='';return;}
             try{
                 regularEvalSetLoading(`Đang đọc file KHDH...\n${file.name}`);
-                let parsed;
-                try{parsed=await regularKhdhDocument(file);}catch(err){console.warn('KHDH trích xuất cục bộ chưa đầy đủ:',err);parsed={rawText:'',topics:[]};warnings.push(`Đọc cục bộ: ${err.message}`);}
-                let topics=regularKhdhNormalizeTopics(parsed.topics);
-                if(!topics.some(t=>t.lessons.length)){
-                    try{topics=await regularKhdhAiFallback(file,parsed.rawText);}
-                    catch(err){warnings.push(err.message);}
+                let parsed={topics:[],warnings:[]},source='';let warnings=[];
+                if(/\.(xls|xlsx)$/i.test(type)){
+                    const xlsx=await regularEvalEnsureXLSX(),book=xlsx.read(await file.arrayBuffer(),{type:'array'});
+                    const sheets=book.SheetNames.map(name=>({name,rows:xlsx.utils.sheet_to_json(book.Sheets[name],{header:1,defval:'',raw:false})}));
+                    source=sheets.map(sheet=>`--- ${sheet.name} ---\n`+sheet.rows.map(row=>row.join(' | ')).join('\n')).join('\n').slice(0,120000);
+                    parsed=window.KHDHParser.parseExcelSheets(sheets);
+                }else if(/\.pdf$/i.test(type)){
+                    try{const result=await regularEvalExtractKHDHPdf(file);source=result.text;warnings.push(...result.warnings);}catch(e){warnings.push('Bộ đọc PDF không hoạt động: '+e.message);}
+                    parsed=window.KHDHParser.parseText(source);
+                }else{
+                    const result=await regularEvalExtractKHDHWord(file);source=result.text;warnings.push(...result.warnings);
+                    parsed=result.table?.topics?.some(t=>t.lessons.length)?result.table:window.KHDHParser.parseText(source);
                 }
-                if(!topics.some(t=>t.lessons.length)){
-                    // Keep the previous parsed KHDH: an unreadable replacement must not erase it.
-                    if(!parsed.rawText.trim())throw new Error('Không nhận diện được nội dung. Hãy thử PDF có lớp text, DOCX hoặc XLSX; file .doc cũ cần Gemini hoặc chuyển sang .docx.');
-                    topics=regularKhdhParseText(parsed.rawText);
-                    warnings.push('Không đọc được toàn bộ cấu trúc; hãy thêm/chỉnh sửa chủ đề và bài thủ công.');
+                const apiKey=getGameGeminiApiKey();
+                if(!window.KHDHParser.stats(parsed).lessons&&apiKey){
+                    try{
+                        regularEvalSetLoading('Đang hỗ trợ nhận diện cấu trúc KHDH bằng AI...');
+                        const prompt=regularEvalKHDHPrompt();let response;
+                        if(/\.pdf$/i.test(type)&&!source.trim()){
+                            response=await callGeminiDirectFallback({action:'regular-evaluation-khdh',prompt,parts:[{inlineData:{mimeType:'application/pdf',data:await regularEvalFileToBase64(file)}},{text:prompt}]},apiKey);
+                        }else if(source.trim()){
+                            response=await callGameGeminiApi({action:'regular-evaluation-khdh',prompt,documentText:source.slice(0,50000)});
+                        }
+                        const extracted=String(response?.text||'').trim();
+                        if(extracted){const aiParsed=window.KHDHParser.parseText(extracted);if(window.KHDHParser.stats(aiParsed).lessons)parsed=aiParsed;}
+                    }catch(error){warnings.push('AI hỗ trợ đọc KHDH chưa thành công: '+(error.message||error));}
                 }
-                const doc={sourceFile:file.name,sourceType:file.name.split('.').pop()?.toLowerCase()||'',parsedAt:new Date().toISOString(),rawText:parsed.rawText.slice(0,55000),topics,selectedLessonIds:[],warnings};
-                regularKhdhSave(doc,key);
-                regularKhdhUi.filterTerm='all';regularKhdhUi.filterWeek='all';regularKhdhUi.filterTopic='all';regularKhdhUi.selectedOnly=false;
-                regularEvalSetLoading('');renderLayout();
-                const count=topics.reduce((n,t)=>n+t.lessons.length,0);
-                showToast(`Đã nhận diện ${topics.length} chủ đề, ${count} bài. Hãy chọn bài trọng tâm để AI sử dụng.`,count?'success':'error');
-                if(warnings.length)showToast('Không đọc được toàn bộ nội dung, vui lòng kiểm tra và chỉnh sửa lại dữ liệu đã nhận diện.','error');
-            }catch(e){regularEvalSetLoading('');console.error(e);showToast(`Không phân tích được KHDH: ${e.message||e}`,'error');}
+                if(!window.KHDHParser.stats(parsed).lessons)warnings.push('Không đọc được toàn bộ nội dung, vui lòng kiểm tra và chỉnh sửa lại dữ liệu đã nhận diện.');
+                if(regularEvalKhdhKey()!==ctx)throw new Error('Bạn đã đổi môn/tháng khi nhập file; vui lòng chọn lại đúng bối cảnh và nhập lại.');
+                if(!window.KHDHParser.stats(parsed).lessons&&regularEvalKHDHCurrent()&&!confirm('File chưa nhận diện được bài học. Có thay thế KHDH đã lưu bằng dữ liệu trống để sửa thủ công?')){
+                    regularEvalSetLoading('');return;
+                }
+                const r=regularEvalState(),record={...parsed,warnings:[...new Set([...(parsed.warnings||[]),...warnings])],originalText:source.slice(0,12000),fileName:file.name,importedAt:new Date().toISOString(),selectedLessonIds:[]};
+                r.khdhParsedMap[ctx]=record;
+                regularEvalKHDHCommit();await saveData();regularEvalSetLoading('');renderLayout();
+                const stats=window.KHDHParser.stats(record);
+                showToast(`Đã nhận diện ${stats.topics} chủ đề, ${stats.lessons} bài.${stats.lessons?'':' Hãy chỉnh sửa thủ công.'}`,stats.lessons?'success':'error');
+            }catch(error){regularEvalSetLoading('');console.error(error);showToast(`Không đọc được KHDH: ${error.message||error}`,'error');}
             finally{input.value='';}
         };
-        window.regularEvalClearKHDH=function(){
-            const key=regularEvalKhdhKey(),r=regularEvalState();
-            if(!regularKhdhGet(key)&&!r.khdhMap[key])return;
-            if(!confirm('Xóa dữ liệu KHDH đã phân tích và văn bản tham chiếu của đúng môn/tháng đang chọn?'))return;
-            delete regularKhdhMap()[key];delete r.khdhMap[key];saveData();renderLayout();showToast('Đã xóa KHDH của môn/tháng đang chọn.','success');
-        };
-
 
         function regularEvalEnsureXLSX(){if(window.XLSX)return Promise.resolve(window.XLSX);return regularEvalLoadScript('https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js','XLSX');}
         function regularEvalHeaders(){return {row1:['STT','Mã định danh Bộ GD&ĐT','Họ và tên','Ngày sinh','Giới tính','Tổ','Tháng','Môn học và hoạt động giáo dục','','Nhận xét năng lực chung','','Nhận xét năng lực đặc thù','','Nhận xét phẩm chất chủ yếu',''],row2:['','','','','','','','Mã nhận xét','Nội dung','Mã nhận xét','Nội dung','Mã nhận xét','Nội dung','Mã nhận xét','Nội dung']};}
@@ -3007,7 +2967,7 @@ NGUYÊN TẮC BẮT BUỘC:
                 const classOptions=classes.map(c=>`<option value="${escapeHtmlAttr(c)}" ${c===r.settings.className?'selected':''}>${mfgEsc(c)}</option>`).join('');
                 const rows=students.map((s,idx)=>{const ev=regularEvalGetEvaluation(s.id,r.settings.month,r.settings.subjectId)||regularEvalDefaultEvaluation(s.id,r.settings.month,r.settings.subjectId);return `<tr><td class="regular-eval-cell regular-eval-stt">${idx+1}</td><td class="regular-eval-cell regular-eval-code">${mfgEsc(s.code||'—')}</td><td class="regular-eval-cell regular-eval-name">${mfgEsc(s.name)}</td><td class="regular-eval-cell regular-eval-dob">${mfgEsc(s.dob||'—')}</td><td class="regular-eval-cell regular-eval-month">${r.settings.month}</td><td class="regular-eval-ai-cell">${regularEvalAiControl(s.id,ev)}</td>${regularEvalCodeCell(s.id,'monHoc_ma',ev.monHoc_ma,ev.isLocked)}${regularEvalTextCell(s.id,'monHoc_noiDung',ev.monHoc_noiDung,ev.isLocked)}${regularEvalCodeCell(s.id,'nlc_ma',ev.nlc_ma,ev.isLocked)}${regularEvalTextCell(s.id,'nlc_noiDung',ev.nlc_noiDung,ev.isLocked)}${regularEvalCodeCell(s.id,'nldt_ma',ev.nldt_ma,ev.isLocked)}${regularEvalTextCell(s.id,'nldt_noiDung',ev.nldt_noiDung,ev.isLocked)}${regularEvalCodeCell(s.id,'pc_ma',ev.pc_ma,ev.isLocked)}${regularEvalTextCell(s.id,'pc_noiDung',ev.pc_noiDung,ev.isLocked)}</tr>`;}).join('');
                 const schoolYear=state.settings?.schoolYear||state.admin?.schoolYear||state.schoolYear||'Năm học hiện tại';
-                return `<section class="regular-eval-page"><div class="regular-eval-toolbar"><button type="button" onclick="switchTab('nhan-xet')" class="regular-eval-back"><i class="ph-bold ph-arrow-left"></i> Quay lại Nhận xét</button><span class="regular-eval-chip"><i class="ph-fill ph-floppy-disk"></i>Tự động lưu cùng dữ liệu app</span></div><div class="regular-eval-hero"><div class="regular-eval-hero-main"><div class="regular-eval-hero-icon"><i class="ph-fill ph-calendar-pencil"></i></div><div><div class="regular-eval-eyebrow">Nhận xét học sinh · Theo tháng</div><h1 class="regular-eval-title">Nhập đánh giá thường xuyên</h1><p class="regular-eval-subtitle">Mặc định tái sử dụng hồ sơ học sinh chung của app GVCN. Khi Xóa/Nhập dữ liệu tại đây, module dùng danh sách làm việc riêng để tránh ảnh hưởng hồ sơ học sinh toàn app. AI vẫn dùng chung Gemini API đã cấu hình.</p></div></div><div class="regular-eval-context"><span class="regular-eval-chip"><i class="ph-fill ph-student"></i>${mfgEsc(r.settings.className)}</span><span class="regular-eval-chip"><i class="ph-fill ph-users-three"></i>${students.length} học sinh</span><span class="regular-eval-chip"><i class="ph-fill ph-chalkboard-teacher"></i>${mfgEsc(state.admin?.name||'Giáo viên')}</span><span class="regular-eval-chip"><i class="ph-fill ph-calendar-dots"></i>${mfgEsc(schoolYear)}</span></div></div><div class="regular-eval-panel"><div class="regular-eval-filter"><div class="regular-eval-filter-grid"><div class="regular-eval-field"><label>Khối</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('grade',this.value)">${[1,2,3,4,5].map(g=>`<option value="${g}" ${String(g)===String(r.settings.grade)?'selected':''}>Khối ${g}</option>`).join('')}</select></div><div class="regular-eval-field"><label>Lớp</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('className',this.value)">${classOptions}</select></div><div class="regular-eval-field"><label>Tháng</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('month',this.value)">${REGULAR_EVAL_MONTHS.map(m=>`<option value="${m}" ${Number(m)===Number(r.settings.month)?'selected':''}>Tháng ${m}</option>`).join('')}</select></div><div class="regular-eval-field"><label>Môn học</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('subjectId',this.value)">${subjects.map(s=>`<option value="${s.id}" ${s.id===r.settings.subjectId?'selected':''}>${mfgEsc(s.name)}</option>`).join('')}</select></div></div><div class="regular-eval-actions"><button class="regular-eval-btn red" onclick="regularEvalClearData()" title="Xóa danh sách làm việc và dữ liệu đánh giá trong module, không xóa hồ sơ học sinh chung"><i class="ph-bold ph-trash"></i> Xóa</button><button class="regular-eval-btn gray" onclick="regularEvalDownloadTemplate()"><i class="ph-bold ph-download-simple"></i> Mẫu Excel</button><button class="regular-eval-btn indigo" onclick="regularEvalOpenImport()"><i class="ph-bold ph-upload-simple"></i> Nhập dữ liệu</button><button class="regular-eval-btn ai" onclick="regularEvalGenerateBulk()"><i class="ph-fill ph-sparkle"></i> AI toàn lớp</button><button class="regular-eval-btn export" onclick="regularEvalExportExcel()"><i class="ph-bold ph-file-xls"></i> Xuất Excel</button></div></div><div class="regular-eval-khdh"><div class="regular-eval-khdh-head"><div><div class="regular-eval-khdh-title"><i class="ph-fill ph-book-open-text"></i> Trọng tâm bài học tháng ${r.settings.month} · ${mfgEsc(subject.name)}</div><div class="regular-eval-note">AI đọc <b>PDF, Word, Excel</b> để lấy bài/chủ điểm trọng tâm và lồng ghép khi tạo nhận xét.</div></div><div class="regular-eval-actions"><button class="regular-eval-btn gray" onclick="regularEvalClearKHDH()"><i class="ph-bold ph-eraser"></i> Xóa KHDH</button><button class="regular-eval-btn indigo" onclick="regularEvalOpenKHDHFile()"><i class="ph-bold ph-upload-simple"></i> Nhập KHDH</button></div></div>${regularKhdhTreeHtml()}</div></div><input type="file" id="regular-eval-import-input" class="hidden" accept=".xlsx,.xls,.csv" onchange="regularEvalHandleImport(this)"><input type="file" id="regular-eval-khdh-input" class="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv" onchange="regularEvalHandleKHDHFile(this)"><div class="regular-eval-table-wrap custom-scrollbar"><table class="regular-eval-table"><thead><tr><th rowspan="2">STT</th><th rowspan="2">Mã định danh Bộ GD&amp;ĐT</th><th rowspan="2">Họ và tên</th><th rowspan="2">Ngày sinh</th><th rowspan="2">Tháng</th><th rowspan="2" style="background:#dbeafe;color:#1e40af">Thao tác AI</th><th colspan="2">Môn học và hoạt động giáo dục</th><th colspan="2">Nhận xét năng lực chung</th><th colspan="2">Nhận xét năng lực đặc thù</th><th colspan="2">Nhận xét phẩm chất chủ yếu</th></tr><tr><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th></tr></thead><tbody>${rows||`<tr><td colspan="14" class="regular-eval-empty"><i class="ph-duotone ph-users"></i>Bảng đánh giá đang trống. Bấm “Nhập dữ liệu” để tải danh sách học sinh mới; hồ sơ học sinh chung của app không bị ảnh hưởng.</td></tr>`}</tbody></table></div></section>`;
+                return `<section class="regular-eval-page"><div class="regular-eval-toolbar"><button type="button" onclick="switchTab('nhan-xet')" class="regular-eval-back"><i class="ph-bold ph-arrow-left"></i> Quay lại Nhận xét</button><span class="regular-eval-chip"><i class="ph-fill ph-floppy-disk"></i>Tự động lưu cùng dữ liệu app</span></div><div class="regular-eval-hero"><div class="regular-eval-hero-main"><div class="regular-eval-hero-icon"><i class="ph-fill ph-calendar-pencil"></i></div><div><div class="regular-eval-eyebrow">Nhận xét học sinh · Theo tháng</div><h1 class="regular-eval-title">Nhập đánh giá thường xuyên</h1><p class="regular-eval-subtitle">Mặc định tái sử dụng hồ sơ học sinh chung của app GVCN. Khi Xóa/Nhập dữ liệu tại đây, module dùng danh sách làm việc riêng để tránh ảnh hưởng hồ sơ học sinh toàn app. AI vẫn dùng chung Gemini API đã cấu hình.</p></div></div><div class="regular-eval-context"><span class="regular-eval-chip"><i class="ph-fill ph-student"></i>${mfgEsc(r.settings.className)}</span><span class="regular-eval-chip"><i class="ph-fill ph-users-three"></i>${students.length} học sinh</span><span class="regular-eval-chip"><i class="ph-fill ph-chalkboard-teacher"></i>${mfgEsc(state.admin?.name||'Giáo viên')}</span><span class="regular-eval-chip"><i class="ph-fill ph-calendar-dots"></i>${mfgEsc(schoolYear)}</span></div></div><div class="regular-eval-panel"><div class="regular-eval-filter"><div class="regular-eval-filter-grid"><div class="regular-eval-field"><label>Khối</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('grade',this.value)">${[1,2,3,4,5].map(g=>`<option value="${g}" ${String(g)===String(r.settings.grade)?'selected':''}>Khối ${g}</option>`).join('')}</select></div><div class="regular-eval-field"><label>Lớp</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('className',this.value)">${classOptions}</select></div><div class="regular-eval-field"><label>Tháng</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('month',this.value)">${REGULAR_EVAL_MONTHS.map(m=>`<option value="${m}" ${Number(m)===Number(r.settings.month)?'selected':''}>Tháng ${m}</option>`).join('')}</select></div><div class="regular-eval-field"><label>Môn học</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('subjectId',this.value)">${subjects.map(s=>`<option value="${s.id}" ${s.id===r.settings.subjectId?'selected':''}>${mfgEsc(s.name)}</option>`).join('')}</select></div></div><div class="regular-eval-actions"><button class="regular-eval-btn red" onclick="regularEvalClearData()" title="Xóa danh sách làm việc và dữ liệu đánh giá trong module, không xóa hồ sơ học sinh chung"><i class="ph-bold ph-trash"></i> Xóa</button><button class="regular-eval-btn gray" onclick="regularEvalDownloadTemplate()"><i class="ph-bold ph-download-simple"></i> Mẫu Excel</button><button class="regular-eval-btn indigo" onclick="regularEvalOpenImport()"><i class="ph-bold ph-upload-simple"></i> Nhập dữ liệu</button><button class="regular-eval-btn ai" onclick="regularEvalGenerateBulk()"><i class="ph-fill ph-sparkle"></i> AI toàn lớp</button><button class="regular-eval-btn export" onclick="regularEvalExportExcel()"><i class="ph-bold ph-file-xls"></i> Xuất Excel</button></div></div><div class="regular-eval-khdh"><div class="regular-eval-khdh-head"><div><div class="regular-eval-khdh-title"><i class="ph-fill ph-book-open-text"></i> Trọng tâm bài học tháng ${r.settings.month} · ${mfgEsc(subject.name)}</div><div class="regular-eval-note">AI đọc <b>PDF, Word, Excel</b> để lấy bài/chủ điểm trọng tâm và lồng ghép khi tạo nhận xét.</div></div><div class="regular-eval-actions"><button class="regular-eval-btn gray" onclick="regularEvalClearKHDH()"><i class="ph-bold ph-eraser"></i> Xóa KHDH</button><button class="regular-eval-btn indigo" onclick="regularEvalOpenKHDHFile()"><i class="ph-bold ph-upload-simple"></i> Nhập KHDH</button></div></div>${regularEvalKHDHTreeHtml()}</div></div><input type="file" id="regular-eval-import-input" class="hidden" accept=".xlsx,.xls,.csv" onchange="regularEvalHandleImport(this)"><input type="file" id="regular-eval-khdh-input" class="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv" onchange="regularEvalHandleKHDHFile(this)"><div class="regular-eval-table-wrap custom-scrollbar"><table class="regular-eval-table"><thead><tr><th rowspan="2">STT</th><th rowspan="2">Mã định danh Bộ GD&amp;ĐT</th><th rowspan="2">Họ và tên</th><th rowspan="2">Ngày sinh</th><th rowspan="2">Tháng</th><th rowspan="2" style="background:#dbeafe;color:#1e40af">Thao tác AI</th><th colspan="2">Môn học và hoạt động giáo dục</th><th colspan="2">Nhận xét năng lực chung</th><th colspan="2">Nhận xét năng lực đặc thù</th><th colspan="2">Nhận xét phẩm chất chủ yếu</th></tr><tr><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th></tr></thead><tbody>${rows||`<tr><td colspan="14" class="regular-eval-empty"><i class="ph-duotone ph-users"></i>Bảng đánh giá đang trống. Bấm “Nhập dữ liệu” để tải danh sách học sinh mới; hồ sơ học sinh chung của app không bị ảnh hưởng.</td></tr>`}</tbody></table></div></section>`;
             }
         };
 
@@ -3035,7 +2995,7 @@ NGUYÊN TẮC BẮT BUỘC:
             const r=regularEvalState(),subject=regularEvalSubject(),subjects=regularEvalSubjectsForGrade(r.settings.grade),students=regularEvalStudents(),khdh=r.khdhMap[regularEvalKhdhKey()]||'',classes=regularEvalClassOptions();
             const classOptions=classes.map(c=>`<option value="${escapeHtmlAttr(c)}" ${c===r.settings.className?'selected':''}>${mfgEsc(c)}</option>`).join('');
             const rows=students.map((s,idx)=>{const ev=regularEvalGetEvaluation(s.id,r.settings.month,r.settings.subjectId)||regularEvalDefaultEvaluation(s.id,r.settings.month,r.settings.subjectId);return `<tr><td class="regular-eval-cell regular-eval-stt">${idx+1}</td><td class="regular-eval-cell regular-eval-code">${mfgEsc(s.code||'—')}</td><td class="regular-eval-cell regular-eval-name">${mfgEsc(s.name)}</td><td class="regular-eval-cell regular-eval-dob">${mfgEsc(s.dob||'—')}</td><td class="regular-eval-cell">${mfgEsc(s.gender||'—')}</td><td class="regular-eval-cell">${mfgEsc(s.group||'—')}</td><td class="regular-eval-cell regular-eval-month">${r.settings.month}</td><td class="regular-eval-ai-cell">${regularEvalAiControl(s.id,ev)}</td>${regularEvalCodeCell(s.id,'monHoc_ma',ev.monHoc_ma,ev.isLocked)}${regularEvalTextCell(s.id,'monHoc_noiDung',ev.monHoc_noiDung,ev.isLocked)}${regularEvalCodeCell(s.id,'nlc_ma',ev.nlc_ma,ev.isLocked)}${regularEvalTextCell(s.id,'nlc_noiDung',ev.nlc_noiDung,ev.isLocked)}${regularEvalCodeCell(s.id,'nldt_ma',ev.nldt_ma,ev.isLocked)}${regularEvalTextCell(s.id,'nldt_noiDung',ev.nldt_noiDung,ev.isLocked)}${regularEvalCodeCell(s.id,'pc_ma',ev.pc_ma,ev.isLocked)}${regularEvalTextCell(s.id,'pc_noiDung',ev.pc_noiDung,ev.isLocked)}</tr>`;}).join('');
-            return `<section class="regular-eval-page"><div class="regular-eval-toolbar"><button type="button" onclick="switchTab('nhan-xet')" class="regular-eval-back"><i class="ph-bold ph-arrow-left"></i> Quay lại Nhận xét</button><span class="regular-eval-chip"><i class="ph-fill ph-arrows-clockwise"></i>Tự đồng bộ hồ sơ học sinh chung</span></div><div class="regular-eval-hero"><div class="regular-eval-hero-main"><div class="regular-eval-hero-icon"><i class="ph-fill ph-calendar-pencil"></i></div><div><div class="regular-eval-eyebrow">Nhận xét học sinh · Theo tháng</div><h1 class="regular-eval-title">Nhập đánh giá thường xuyên</h1><p class="regular-eval-subtitle">Danh sách luôn lấy trực tiếp từ Quản lý học sinh chung. File Excel chỉ bổ sung/cập nhật hồ sơ và không xóa dữ liệu cũ khi ô để trống. Nhận xét được lưu riêng theo học sinh, năm học, tháng và môn.</p></div></div><div class="regular-eval-context"><span class="regular-eval-chip"><i class="ph-fill ph-users-three"></i>${students.length} học sinh</span><span class="regular-eval-chip"><i class="ph-fill ph-calendar-dots"></i>${mfgEsc(regularEvalSchoolYear())}</span></div></div><div class="regular-eval-panel"><div class="regular-eval-filter"><div class="regular-eval-filter-grid"><div class="regular-eval-field"><label>Khối</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('grade',this.value)">${[1,2,3,4,5].map(g=>`<option value="${g}" ${String(g)===String(r.settings.grade)?'selected':''}>Khối ${g}</option>`).join('')}</select></div><div class="regular-eval-field"><label>Lớp</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('className',this.value)">${classOptions}</select></div><div class="regular-eval-field"><label>Tháng</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('month',this.value)">${REGULAR_EVAL_MONTHS.map(m=>`<option value="${m}" ${Number(m)===Number(r.settings.month)?'selected':''}>Tháng ${m}</option>`).join('')}</select></div><div class="regular-eval-field"><label>Môn học</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('subjectId',this.value)">${subjects.map(s=>`<option value="${s.id}" ${s.id===r.settings.subjectId?'selected':''}>${mfgEsc(s.name)}</option>`).join('')}</select></div></div><div class="regular-eval-actions"><button class="regular-eval-btn red" onclick="regularEvalClearData()"><i class="ph-bold ph-trash"></i> Xóa đánh giá</button><button class="regular-eval-btn gray" onclick="regularEvalDownloadTemplate()"><i class="ph-bold ph-download-simple"></i> Mẫu Excel</button><button class="regular-eval-btn indigo" onclick="regularEvalOpenImport()"><i class="ph-bold ph-upload-simple"></i> Nhập File mẫu</button><button class="regular-eval-btn gray" onclick="regularEvalOpenHistory()"><i class="ph-bold ph-clock-counter-clockwise"></i> Lịch sử nhận xét</button><button class="regular-eval-btn ai" onclick="regularEvalGenerateBulk()"><i class="ph-fill ph-sparkle"></i> AI toàn lớp</button><button class="regular-eval-btn export" onclick="regularEvalExportExcel()"><i class="ph-bold ph-file-xls"></i> Xuất Excel</button></div></div><div class="regular-eval-khdh"><div class="regular-eval-khdh-head"><div><div class="regular-eval-khdh-title"><i class="ph-fill ph-book-open-text"></i>KHDH tháng ${r.settings.month} · ${mfgEsc(subject.name)}</div><div class="regular-eval-note">AI kết hợp KHDH hiện tại với nhận xét tháng trước của đúng học sinh và đúng môn.</div></div><div class="regular-eval-actions"><button class="regular-eval-btn gray" onclick="regularEvalClearKHDH()">Xóa KHDH</button><button class="regular-eval-btn indigo" onclick="regularEvalOpenKHDHFile()">Nhập KHDH</button></div></div>${regularKhdhTreeHtml()}</div></div><input type="file" id="regular-eval-import-input" class="hidden" accept=".xlsx,.xls,.csv" onchange="regularEvalHandleImport(this)"><input type="file" id="regular-eval-khdh-input" class="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv" onchange="regularEvalHandleKHDHFile(this)">${regularEvalImportedSubjectNotice()}${regularEvalBulkSummaryHtml()}${regularEvalHistoryHtml(students)}<div class="regular-eval-table-wrap custom-scrollbar"><table class="regular-eval-table"><thead><tr><th rowspan="2">STT</th><th rowspan="2">Mã định danh Bộ GD&amp;ĐT</th><th rowspan="2">Họ và tên</th><th rowspan="2">Ngày sinh</th><th rowspan="2">Giới tính</th><th rowspan="2">Tổ</th><th rowspan="2">Tháng</th><th rowspan="2">Thao tác AI</th><th colspan="2">Môn học và hoạt động giáo dục</th><th colspan="2">Nhận xét năng lực chung</th><th colspan="2">Nhận xét năng lực đặc thù</th><th colspan="2">Nhận xét phẩm chất chủ yếu</th></tr><tr><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th></tr></thead><tbody>${rows||`<tr><td colspan="16" class="regular-eval-empty"><i class="ph-duotone ph-users"></i>Chưa có hồ sơ học sinh chung. Hãy thêm tại Quản lý học sinh hoặc dùng “Nhập File mẫu”.</td></tr>`}</tbody></table></div></section>`;
+            return `<section class="regular-eval-page"><div class="regular-eval-toolbar"><button type="button" onclick="switchTab('nhan-xet')" class="regular-eval-back"><i class="ph-bold ph-arrow-left"></i> Quay lại Nhận xét</button><span class="regular-eval-chip"><i class="ph-fill ph-arrows-clockwise"></i>Tự đồng bộ hồ sơ học sinh chung</span></div><div class="regular-eval-hero"><div class="regular-eval-hero-main"><div class="regular-eval-hero-icon"><i class="ph-fill ph-calendar-pencil"></i></div><div><div class="regular-eval-eyebrow">Nhận xét học sinh · Theo tháng</div><h1 class="regular-eval-title">Nhập đánh giá thường xuyên</h1><p class="regular-eval-subtitle">Danh sách luôn lấy trực tiếp từ Quản lý học sinh chung. File Excel chỉ bổ sung/cập nhật hồ sơ và không xóa dữ liệu cũ khi ô để trống. Nhận xét được lưu riêng theo học sinh, năm học, tháng và môn.</p></div></div><div class="regular-eval-context"><span class="regular-eval-chip"><i class="ph-fill ph-users-three"></i>${students.length} học sinh</span><span class="regular-eval-chip"><i class="ph-fill ph-calendar-dots"></i>${mfgEsc(regularEvalSchoolYear())}</span></div></div><div class="regular-eval-panel"><div class="regular-eval-filter"><div class="regular-eval-filter-grid"><div class="regular-eval-field"><label>Khối</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('grade',this.value)">${[1,2,3,4,5].map(g=>`<option value="${g}" ${String(g)===String(r.settings.grade)?'selected':''}>Khối ${g}</option>`).join('')}</select></div><div class="regular-eval-field"><label>Lớp</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('className',this.value)">${classOptions}</select></div><div class="regular-eval-field"><label>Tháng</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('month',this.value)">${REGULAR_EVAL_MONTHS.map(m=>`<option value="${m}" ${Number(m)===Number(r.settings.month)?'selected':''}>Tháng ${m}</option>`).join('')}</select></div><div class="regular-eval-field"><label>Môn học</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('subjectId',this.value)">${subjects.map(s=>`<option value="${s.id}" ${s.id===r.settings.subjectId?'selected':''}>${mfgEsc(s.name)}</option>`).join('')}</select></div></div><div class="regular-eval-actions"><button class="regular-eval-btn red" onclick="regularEvalClearData()"><i class="ph-bold ph-trash"></i> Xóa đánh giá</button><button class="regular-eval-btn gray" onclick="regularEvalDownloadTemplate()"><i class="ph-bold ph-download-simple"></i> Mẫu Excel</button><button class="regular-eval-btn indigo" onclick="regularEvalOpenImport()"><i class="ph-bold ph-upload-simple"></i> Nhập File mẫu</button><button class="regular-eval-btn gray" onclick="regularEvalOpenHistory()"><i class="ph-bold ph-clock-counter-clockwise"></i> Lịch sử nhận xét</button><button class="regular-eval-btn ai" onclick="regularEvalGenerateBulk()"><i class="ph-fill ph-sparkle"></i> AI toàn lớp</button><button class="regular-eval-btn export" onclick="regularEvalExportExcel()"><i class="ph-bold ph-file-xls"></i> Xuất Excel</button></div></div><div class="regular-eval-khdh"><div class="regular-eval-khdh-head"><div><div class="regular-eval-khdh-title"><i class="ph-fill ph-book-open-text"></i>KHDH tháng ${r.settings.month} · ${mfgEsc(subject.name)}</div><div class="regular-eval-note">AI kết hợp KHDH hiện tại với nhận xét tháng trước của đúng học sinh và đúng môn.</div></div><div class="regular-eval-actions"><button class="regular-eval-btn gray" onclick="regularEvalClearKHDH()">Xóa KHDH</button><button class="regular-eval-btn indigo" onclick="regularEvalOpenKHDHFile()">Nhập KHDH</button></div></div>${regularEvalKHDHTreeHtml()}</div></div><input type="file" id="regular-eval-import-input" class="hidden" accept=".xlsx,.xls,.csv" onchange="regularEvalHandleImport(this)"><input type="file" id="regular-eval-khdh-input" class="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv" onchange="regularEvalHandleKHDHFile(this)">${regularEvalImportedSubjectNotice()}${regularEvalBulkSummaryHtml()}${regularEvalHistoryHtml(students)}<div class="regular-eval-table-wrap custom-scrollbar"><table class="regular-eval-table"><thead><tr><th rowspan="2">STT</th><th rowspan="2">Mã định danh Bộ GD&amp;ĐT</th><th rowspan="2">Họ và tên</th><th rowspan="2">Ngày sinh</th><th rowspan="2">Giới tính</th><th rowspan="2">Tổ</th><th rowspan="2">Tháng</th><th rowspan="2">Thao tác AI</th><th colspan="2">Môn học và hoạt động giáo dục</th><th colspan="2">Nhận xét năng lực chung</th><th colspan="2">Nhận xét năng lực đặc thù</th><th colspan="2">Nhận xét phẩm chất chủ yếu</th></tr><tr><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th></tr></thead><tbody>${rows||`<tr><td colspan="16" class="regular-eval-empty"><i class="ph-duotone ph-users"></i>Chưa có hồ sơ học sinh chung. Hãy thêm tại Quản lý học sinh hoặc dùng “Nhập File mẫu”.</td></tr>`}</tbody></table></div></section>`;
         };
 
         const regularEvalRenderBase=RegularEvaluationPage.render;
