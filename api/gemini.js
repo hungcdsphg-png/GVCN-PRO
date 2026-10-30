@@ -259,10 +259,10 @@ async function generateRegularEvaluation(apiKey, prompt) {
 
 async function analyzeRegularEvaluationKHDH(apiKey, { documentText, prompt }) {
   let lastError;
-  const text = String(documentText || '').slice(0,60000);
+  const text = String(documentText || '').slice(0,24000);
   for (const model of MODEL_CANDIDATES) {
     try {
-      const data = await googleGenerate({ apiKey, model, body:{ contents:[{parts:[{text:`${text}\n\n${String(prompt||'')}`}]}], generationConfig:{maxOutputTokens:800,thinkingConfig:{thinkingLevel:thinkingLevelFor(model)}} }});
+      const data = await googleGenerate({ apiKey, model, body:{ contents:[{parts:[{text:`${text}\n\n${String(prompt||'')}`}]}], generationConfig:{maxOutputTokens:8192,thinkingConfig:{thinkingLevel:thinkingLevelFor(model)}} }});
       const result = data?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('').trim() || '';
       if (!result) throw Object.assign(new Error('Gemini không trả về nội dung KHDH.'), {contentInvalid:true});
       return { model, text:result };
