@@ -1584,6 +1584,8 @@
                 selectedCriteria: [] // Mảng lưu danh sách tiêu chí đã chọn
             },
             pointsSummaryDate: '', // Ngày đang xem trong bảng tổng hợp cộng/trừ điểm
+            competitionResetAt: null, // Mốc bắt đầu kỳ thi đua mới (ISO 8601)
+            competitionCycleId: null, // Mã kỳ thi đua, phân biệt lịch sử trước/sau reset
             
             selectedStudentForRewards: null,
             editingStudentId: null,
@@ -1734,6 +1736,8 @@
             }
             if (!state.pointsForm.selectedCriteria) state.pointsForm.selectedCriteria = [];
             if (!state.pointsForm.actionDate) state.pointsForm.actionDate = state.pointsSummaryDate || pointsTodayKey;
+            if (typeof state.competitionResetAt !== 'string' || !state.competitionResetAt) state.competitionResetAt = null;
+            if (typeof state.competitionCycleId !== 'string' || !state.competitionCycleId) state.competitionCycleId = null;
             
             const defaultRewards = [
                 { id: 'r1', name: 'Đổi chỗ ngồi 1 ngày', cost: 10, icon: 'ph-seat', color: 'text-purple-600', bg: 'bg-purple-100', desc: 'Chọn chỗ ngồi yêu thích' },
@@ -10452,7 +10456,8 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
 
         function renderViewTongQuan() {
             // Calculate top 5 students for Bảng Vàng
-            const topStudentsHtml = [...state.students].sort((a, b) => (b.points || 0) - (a.points || 0)).slice(0, 5).map((s, index) => {
+            const competitionJustReset = Boolean(state.competitionResetAt) && !(state.students || []).some(s => (Number(s.points) || 0) > 0);
+            const topStudentsHtml = (competitionJustReset ? [] : [...state.students]).sort((a, b) => (b.points || 0) - (a.points || 0)).slice(0, 5).map((s, index) => {
                 const rank = index + 1;
                 let crownHtml = '';
                 let badgeColor = 'bg-slate-400';
@@ -10484,7 +10489,7 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
                 const weekProg = basePoints > 0 ? Math.floor((Math.sin(s.id * 10) + 1) * 15) + 5 : 0; 
                 return { ...s, weekProg: Math.min(weekProg, basePoints) };
             });
-            const topProgress = [...studentsWithProgress].sort((a,b) => b.weekProg - a.weekProg).slice(0, 3);
+            const topProgress = (competitionJustReset ? [] : [...studentsWithProgress]).sort((a,b) => b.weekProg - a.weekProg).slice(0, 3);
 
             // Calculate absences for today
             const d = new Date();
@@ -10759,6 +10764,16 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
                 .trim();
         }
 
+        // Điểm hiện tại được lưu ở student.points. Lịch sử các kỳ cũ vẫn được
+        // giữ nguyên để tra cứu, nhưng KHÔNG được dùng để hoàn/trừ điểm kỳ mới.
+        // Đánh dấu kỳ thay vì dựa vào ngày giáo viên chọn (có thể nhập hồi tố).
+        function isCurrentCompetitionHistory(history) {
+            if (!state.competitionResetAt) return true; // Dữ liệu phiên bản trước reset
+            if (state.competitionCycleId) return history?.competitionCycleId === state.competitionCycleId;
+            const recordedAt = Date.parse(history?.recordedAt || history?.performedAt || history?.date || '');
+            return Number.isFinite(recordedAt) && recordedAt >= Date.parse(state.competitionResetAt);
+        }
+
         function collectPointsTransactionsForDate(dateKey) {
             const grouped = new Map();
             (state.students || []).forEach(student => {
@@ -10783,6 +10798,7 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
                     const group = grouped.get(key);
                     group.entries.push({ studentId: student.id, studentName: student.name, history });
                     if (new Date(history.date) > new Date(group.date)) group.date = history.date;
+                    group.isArchived = group.entries.every(entry => !isCurrentCompetitionHistory(entry.history));
                 });
             });
             return Array.from(grouped.values()).sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -10797,6 +10813,7 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
 
             transactions.forEach(t => {
                 t.entries.forEach(e => {
+                    if (!isCurrentCompetitionHistory(e.history)) return; // Chỉ thống kê kỳ hiện tại
                     affected.add(String(e.studentId));
                     const delta = Number.isFinite(Number(e.history.actualPointsDelta)) ? Number(e.history.actualPointsDelta) : (Number(e.history.points) || 0);
                     if (delta >= 0) totalPlus += delta;
@@ -10816,13 +10833,14 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
                 const iconClass = isPositive ? 'ph-plus-circle text-emerald-600 bg-emerald-100' : 'ph-minus-circle text-rose-600 bg-rose-100';
                 const keyJs = escapeInlineJs(t.key);
                 return `
-                    <div class="p-4 rounded-2xl border border-slate-200 bg-white hover:border-indigo-200 hover:shadow-md transition-all group">
+                    <div class="p-4 rounded-2xl border border-slate-200 bg-white hover:border-indigo-200 hover:shadow-md transition-all group ${t.isArchived ? 'opacity-75' : ''}">
                         <div class="flex items-start gap-3">
                             <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${iconClass}"><i class="ph-bold ${isPositive ? 'ph-plus-circle' : 'ph-minus-circle'} text-xl"></i></div>
                             <div class="min-w-0 flex-1">
                                 <div class="flex items-start justify-between gap-3">
                                     <div class="min-w-0">
                                         <div class="font-black text-slate-800 text-sm leading-snug">${pointsSummaryEscape(t.baseReason || first.reason || 'Thay đổi điểm')}</div>
+                                        ${t.isArchived ? '<span class="inline-block mt-1 px-2 py-0.5 text-[10px] rounded bg-amber-50 text-amber-700 font-bold">Kỳ thi đua trước · không tính vào điểm hiện tại</span>' : ''}
                                         <div class="mt-1 text-[11px] text-slate-500 font-semibold flex flex-wrap items-center gap-x-2 gap-y-1">
                                             <span><i class="ph-fill ph-user-circle mr-1"></i>${pointsSummaryEscape(targetText)}</span>
                                             <span>•</span><span>${pointsSummaryEscape(t.category)}</span>
@@ -10834,9 +10852,9 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
                                 ${t.note ? `<div class="mt-2 text-xs text-slate-500 italic bg-slate-50 rounded-lg px-2.5 py-2">${pointsSummaryEscape(t.note)}</div>` : ''}
                                 <div class="mt-3 flex items-center justify-between gap-2">
                                     <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">${studentsText}${t.performedBy ? ` • ${pointsSummaryEscape(t.performedBy)}` : ''}</div>
-                                    <button onclick="deletePointsHistoryTransaction('${keyJs}')" class="opacity-80 group-hover:opacity-100 px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-[11px] transition-colors flex items-center gap-1.5" title="Xóa lượt cộng/trừ điểm sai và hoàn lại số điểm">
+                                    ${t.isArchived ? '<span class="text-[10px] font-semibold text-amber-700">Lưu trữ chỉ xem</span>' : `<button onclick="deletePointsHistoryTransaction('${keyJs}')" class="opacity-80 group-hover:opacity-100 px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-[11px] transition-colors flex items-center gap-1.5" title="Xóa lượt cộng/trừ điểm sai của kỳ hiện tại">
                                         <i class="ph-bold ph-trash"></i> Xóa sai
-                                    </button>
+                                    </button>`}
                                 </div>
                             </div>
                         </div>
@@ -10906,6 +10924,9 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
             const transactions = collectPointsTransactionsForDate(state.pointsSummaryDate || getPointsLocalDateKey(new Date()));
             const transaction = transactions.find(t => t.key === key);
             if (!transaction) return showToast('Không tìm thấy lượt điểm cần xóa.', 'error');
+            if (transaction.entries.some(entry => !isCurrentCompetitionHistory(entry.history))) {
+                return showToast('Lịch sử của kỳ trước chỉ được xem, không điều chỉnh điểm kỳ mới.', 'error');
+            }
             const targetLabel = transaction.targetLabel || (transaction.entries.length > 1 ? `${transaction.entries.length} học sinh` : transaction.entries[0]?.studentName || 'học sinh');
             const pointText = `${transaction.points > 0 ? '+' : ''}${transaction.points} điểm`;
             if (!confirm(`Xóa lượt ${pointText} của ${targetLabel}?\n\nNội dung: ${transaction.baseReason || ''}\n\nĐiểm và sao liên quan sẽ được hoàn lại tương ứng.`)) return;
@@ -10917,6 +10938,7 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
                     const h = student.history[i];
                     const historyKey = h.transactionId || `legacy-${student.id}-${h.id}`;
                     if (historyKey !== key) continue;
+                    if (!isCurrentCompetitionHistory(h)) continue;
 
                     const pointDelta = Number.isFinite(Number(h.actualPointsDelta)) ? Number(h.actualPointsDelta) : (Number(h.points) || 0);
                     const starDelta = Number.isFinite(Number(h.actualStarsDelta)) ? Number(h.actualStarsDelta) : (Number(h.points) || 0);
@@ -11249,6 +11271,7 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
             const transactionId = `PT-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
             const actionDate = pf.actionDate || state.pointsSummaryDate || getPointsLocalDateKey(new Date());
             const historyDate = buildPointsHistoryDate(actionDate);
+            const recordedAt = new Date().toISOString(); // Ngày ghi nhận thực tế (khác ngày giáo viên chọn)
             let targetLabel = '';
             if (pf.targetType === 'student') targetLabel = targetStudents[0]?.name || 'Học sinh';
             else if (pf.targetType === 'group') targetLabel = pf.selectedTargetId || 'Nhóm/Tổ';
@@ -11259,6 +11282,8 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
                 date: historyDate,
                 actionDate,
                 performedAt: historyDate,
+                recordedAt,
+                competitionCycleId: state.competitionCycleId || null,
                 points: pointsToApply,
                 baseReason: pf.reason.trim(),
                 note: pf.note ? pf.note.trim() : '',
@@ -12532,7 +12557,9 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
             // Define rankingTab globally if not exists
             if(typeof rankingTab === 'undefined') window.rankingTab = 'bang-vang';
 
-            if (rankingTab === 'bang-vang') {
+            if (rankingTab === 'bang-vang' && Boolean(state.competitionResetAt) && sortedStudents.every(s => (Number(s.points) || 0) === 0)) {
+                contentHtml = `<div class="bg-white rounded-[2rem] border border-slate-200 p-12 text-center shadow-sm"><i class="ph-duotone ph-trophy text-6xl text-slate-300 block mb-4"></i><h3 class="font-black text-xl text-slate-700">Kỳ thi đua mới: 0 điểm</h3><p class="mt-2 text-slate-500 text-sm">Chưa có học sinh nào được cộng điểm trong kỳ này. Vào Tích điểm để bắt đầu.</p></div>`;
+            } else if (rankingTab === 'bang-vang') {
                 const top3 = sortedStudents.slice(0, 3); const others = sortedStudents.slice(3);
                 const rank1 = top3[0], rank2 = top3[1], rank3 = top3[2];
 
@@ -12726,6 +12753,7 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
                 state.students.forEach(s => {
                     if (s.history) {
                         s.history.forEach(h => {
+                            if (!isCurrentCompetitionHistory(h)) return;
                             if (h.date) {
                                 const dateObj = new Date(h.date);
                                 const monthYear = `${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`;
@@ -12769,6 +12797,7 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
 
                     if (s.history) {
                         s.history.forEach(h => {
+                            if (!isCurrentCompetitionHistory(h)) return;
                             if (h.date && h.points) {
                                 const dateObj = new Date(h.date);
                                 const monthYear = `${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`;
@@ -12975,7 +13004,7 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
                             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 bg-white border border-red-200 rounded-2xl">
                                 <div>
                                     <div class="font-bold text-slate-800">Đặt lại điểm thi đua</div>
-                                    <div class="text-xs text-slate-500 mt-1">Xóa số điểm hiện tại của một học sinh, tổ hoặc toàn lớp về 0.</div>
+                                    <div class="text-xs text-slate-500 mt-1">Đưa điểm thi đua của toàn bộ học sinh và tất cả tổ về 0, giữ lịch sử và sao đổi quà.</div>
                                 </div>
                                 <button onclick="openResetPointsModal()" class="w-full sm:w-auto px-6 py-3 bg-orange-50 text-orange-600 font-bold rounded-xl hover:bg-orange-100 transition-colors shadow-sm whitespace-nowrap border border-orange-100">ĐẶT LẠI ĐIỂM</button>
                             </div>
@@ -13978,40 +14007,62 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
         }
         
         function openResetPointsModal() {
-            let optionsHtml = `<option value="all">Tất cả học sinh</option>`;
-            state.groups.forEach(g => optionsHtml += `<option value="group_${g.name}">Tổ: ${g.name}</option>`);
-            state.students.forEach(s => optionsHtml += `<option value="student_${s.id}">Cá nhân: ${s.name}</option>`);
-
             document.getElementById('modal-container').innerHTML = `
-                <div class="fixed inset-0 bg-slate-900/70 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" id="reset-points-modal">
-                    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden flex flex-col relative pt-8 pb-6 px-8">
-                        <div class="flex items-center gap-3 mb-6 text-orange-600"><i class="ph-fill ph-warning-circle text-5xl drop-shadow-md"></i><h3 class="font-black text-2xl tracking-tight">ĐẶT LẠI ĐIỂM</h3></div>
-                        <div class="space-y-5 mb-8">
-                            <div><label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Chọn đối tượng:</label><select id="reset-target" class="w-full px-5 py-3.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-800 outline-none focus:border-orange-400">${optionsHtml}</select></div>
-                            <div><label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Loại điểm xóa:</label><select id="reset-type" class="w-full px-5 py-3.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-800 outline-none focus:border-orange-400"><option value="stars">Chỉ Đặt lại Sao</option><option value="all">Xóa cả Tổng điểm & Sao</option></select></div>
-                        </div>
-                        <div class="bg-orange-50 p-5 rounded-2xl border border-orange-100 mb-6 shadow-inner">
-                            <label class="block text-xs font-bold text-orange-700 mb-2">Gõ <span class="font-black text-red-600 mx-1">XAC NHAN</span> để tiếp tục:</label>
-                            <input type="text" id="reset-confirm-input" class="w-full px-4 py-3 bg-white border border-orange-200 rounded-xl text-center text-sm font-black text-red-600 outline-none">
-                        </div>
-                        <div class="flex gap-4">
-                            <button onclick="closeModal('reset-points-modal')" class="flex-1 py-4 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">HỦY BỎ</button>
-                            <button onclick="executeResetPoints()" class="flex-1 py-4 bg-gradient-to-r from-orange-500 to-red-500 text-white font-black rounded-xl hover:shadow-lg hover:-translate-y-0.5 transition-all">THỰC HIỆN</button>
+                <div class="fixed inset-0 bg-slate-900/70 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" id="reset-points-modal" role="dialog" aria-modal="true" aria-labelledby="reset-points-heading">
+                    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col relative pt-8 pb-6 px-8">
+                        <div class="flex items-center gap-3 mb-5 text-orange-600"><i class="ph-fill ph-warning-circle text-5xl"></i><h3 id="reset-points-heading" class="font-black text-2xl">ĐẶT LẠI ĐIỂM THI ĐUA</h3></div>
+                        <p class="text-slate-700 text-base font-semibold leading-relaxed mb-4">Bạn có chắc muốn đặt lại toàn bộ điểm thi đua? Tất cả điểm của học sinh và các tổ sẽ trở về 0 để bắt đầu tích điểm lại từ đầu.</p>
+                        <p class="text-sm text-slate-500 bg-amber-50 border border-amber-100 rounded-xl p-3 mb-6">Lịch sử cộng/trừ trước đây vẫn được giữ để tra cứu. Sao dùng để đổi quà và mọi dữ liệu khác không thay đổi.</p>
+                        <div class="flex gap-3">
+                            <button onclick="closeModal('reset-points-modal')" class="flex-1 py-3.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">Hủy</button>
+                            <button id="confirm-reset-points-btn" onclick="executeResetPoints()" class="flex-1 py-3.5 bg-orange-600 text-white font-black rounded-xl hover:bg-orange-700 transition-colors">Xác nhận đặt lại</button>
                         </div>
                     </div>
                 </div>
             `;
         }
 
-        function executeResetPoints() {
-            if (document.getElementById('reset-confirm-input').value.trim().toUpperCase() !== 'XAC NHAN') return showToast("Gõ đúng chữ XAC NHAN", "error");
-            const target = document.getElementById('reset-target').value, type = document.getElementById('reset-type').value;
-            let count = 0;
-            state.students.forEach(s => {
-                let shouldReset = (target === 'all') || (target.startsWith('group_') && s.group === target.replace('group_', '')) || (target.startsWith('student_') && s.id.toString() === target.replace('student_', ''));
-                if (shouldReset) { if (type === 'stars') s.stars = 0; else { s.points = 0; s.stars = 0; } count++; }
-            });
-            saveData(); renderLayout(); closeModal('reset-points-modal'); showToast(`Đã đặt lại điểm cho ${count} học sinh!`, "success");
+        // Không ghi nhận thành công trước khi dữ liệu đã được lưu bền vững.
+        // Chế độ đám mây phải lưu Firestore thành công, tránh mở lại bị khôi phục điểm cũ.
+        let competitionResetSaving = false;
+        async function executeResetPoints() {
+            if (competitionResetSaving || !document.getElementById('reset-points-modal')) return;
+            const button = document.getElementById('confirm-reset-points-btn');
+            competitionResetSaving = true;
+            if (button) { button.disabled = true; button.textContent = 'Đang lưu...'; }
+
+            const oldPoints = (state.students || []).map(student => student.points);
+            const oldResetAt = state.competitionResetAt;
+            const oldCycleId = state.competitionCycleId;
+            const now = new Date();
+            state.competitionResetAt = now.toISOString();
+            state.competitionCycleId = `competition-${now.getTime()}-${Math.random().toString(36).slice(2, 9)}`;
+            (state.students || []).forEach(student => { student.points = 0; });
+
+            try {
+                const serialized = JSON.stringify(state);
+                if (window.useCloud && window.cloudDb && window.cloudUser) {
+                    const docRef = window.cloudDoc(window.cloudDb, 'artifacts', window.cloudAppId, 'users', window.cloudUser.uid, 'classData', 'main');
+                    await window.cloudSetDoc(docRef, { state });
+                    // Bản sao dự phòng cho trường hợp lần sau không kết nối được đám mây.
+                    try { localStorage.setItem('chuyen_tau_data', serialized); }
+                    catch (cacheError) { console.warn('Không ghi được bản sao LocalStorage; dữ liệu đã lưu trên đám mây.', cacheError); }
+                } else {
+                    localStorage.setItem('chuyen_tau_data', serialized);
+                }
+                // renderLayout vẽ lại modal-container; chỉ đóng modal sau khi lưu thành công.
+                renderLayout();
+                showToast(`Đã đặt lại điểm thi đua cho ${(state.students || []).length} học sinh và tất cả các tổ về 0.`, 'success');
+            } catch (error) {
+                (state.students || []).forEach((student, index) => { student.points = oldPoints[index]; });
+                state.competitionResetAt = oldResetAt;
+                state.competitionCycleId = oldCycleId;
+                console.error('Không lưu được thao tác đặt lại điểm thi đua:', error);
+                showToast('Chưa thể đặt lại điểm: lỗi lưu dữ liệu. Điểm cũ đã được giữ nguyên; vui lòng thử lại.', 'error');
+                if (button) { button.disabled = false; button.textContent = 'Xác nhận đặt lại'; }
+            } finally {
+                competitionResetSaving = false;
+            }
         }
 
         function openWipeDataModal() {
@@ -14130,6 +14181,7 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
                     const dateStr = `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`;
                     const timeStr = `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
                     const isPositive = h.points > 0;
+                    const isArchived = !isCurrentCompetitionHistory(h);
                     
                     const colorTheme = isPositive 
                         ? { bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-200', icon: 'ph-trend-up', sign: '+' } 
@@ -14153,6 +14205,7 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
                                 </div>
                                 <div class="text-[11px] font-bold text-slate-400 flex items-center gap-1.5 uppercase tracking-wider">
                                     <i class="ph-fill ph-clock"></i> ${timeStr} <span class="mx-1">•</span> <i class="ph-fill ph-calendar-blank"></i> ${dateStr}
+                                    ${isArchived ? '<span class="ml-2 text-amber-700">• Kỳ thi đua trước (lưu trữ)</span>' : ''}
                                 </div>
                             </div>
                         </div>
