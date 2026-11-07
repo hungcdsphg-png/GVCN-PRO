@@ -241,7 +241,7 @@ async function generateRegularEvaluation(apiKey, prompt) {
 - TUYỆT ĐỐI không có hô ngữ/đại từ nhân xưng ở bất kỳ vị trí nào: "Em", "Con", "Bạn", "Cháu", "Học sinh", "Các em", "Các bạn", tên/họ tên học sinh. "Con đường", "con số", "bạn bè" nếu là danh từ bài học thì không tính là xưng hô.
 - Không mở đầu bằng "Nắm", "Nắm được", "Nắm vững"; ưu tiên "Đọc", "Viết", "Thực hiện", "Nhận biết", "Phân biệt", "Vận dụng", "Tính", "Giải", "Trình bày", "Xác định", "Hoàn thành", "Bước đầu".
 - CẤM câu chung chung không nói rõ học gì/làm được gì: "Hoàn thành tốt nhiệm vụ học tập", "Có kết quả học tập tốt", "Tiếp thu bài khá tốt", "Có tiến bộ trong học tập", "Thực hiện tốt các yêu cầu", "Cần tiếp tục phát huy". "Có ý thức/Có tiến bộ/Có khả năng" phải đi kèm hành động và nội dung cụ thể.
-- Không ghi tên môn/lớp/khối kiểu nhãn, điểm số, KHDH, kế hoạch dạy học, tên file hay dữ liệu kỹ thuật vào câu. Không dùng "yếu", "kém", "không biết", "không có khả năng". Đa dạng diễn đạt mà không thêm nội dung ngoài KHDH.
+- Không ghi tên môn/lớp/khối kiểu nhãn, điểm số, KHDH, kế hoạch dạy học, tên file hay dữ liệu kỹ thuật vào câu. Không dùng "yếu", "kém", "không biết", "không có khả năng". KHÔNG lặp câu/ý giữa bốn nhóm và học sinh, không chỉ thay 1–2 từ; đa dạng chi tiết kỹ năng và cách diễn đạt nhưng không thêm nội dung ngoài KHDH.
 - Nhóm Không chọn trả noiDung rỗng, không tự đoán điểm. ma để chuỗi rỗng vì app quản lý điểm riêng. Tự kiểm tra 250 ký tự và tính cụ thể trước khi trả JSON.`;
   let lastError;
   for (const model of MODEL_CANDIDATES) {
