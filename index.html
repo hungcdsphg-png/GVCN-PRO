@@ -2370,18 +2370,15 @@
             const norm=x=>({noiDung:String(x?.noiDung??'').trim()});
             return {monHoc:norm(obj.monHoc),nangLucChung:norm(obj.nangLucChung),nangLucDacThu:norm(obj.nangLucDacThu),phamChat:norm(obj.phamChat)};
         }
-        const REGULAR_EVAL_SYSTEM_PROMPT=`Bạn là trợ lý hỗ trợ giáo viên tiểu học Việt Nam viết nhận xét đánh giá thường xuyên.
-NGUYÊN TẮC BẮT BUỘC:
-- Viết 4 nhận xét RIÊNG cho 4 nhóm theo đúng điểm riêng x/10, không dùng một điểm chung. Điểm 10 nổi bật hơn 9; 8 hơn 7; 6 hơn 5; 4 hơn 2. 9–10 nổi bật/chính xác/linh hoạt (10 phải xuất sắc hơn 9); 7–8 tốt (8 hơn 7); 5–6 đạt cơ bản, cần rèn thêm (6 hơn 5); 2–4 bước đầu, cần hướng dẫn, khích lệ (4 hơn 2). Không phán xét.
-- ƯU TIÊN TUYỆT ĐỐI kiến thức/kỹ năng, chủ điểm, bài học, trọng tâm trong KHDH đúng môn/tháng. Chỉ viết nội dung được KHDH chứng minh; KHÔNG bịa bài học, kỹ năng, thành tích. Nếu không có KHDH, diễn đạt thận trọng, tránh tự khẳng định kiến thức cụ thể chưa cung cấp.
-- Đối với Năng lực chung, Năng lực đặc thù, Phẩm chất: nhận xét biểu hiện tương ứng trong hoạt động KHDH (nếu có), không nhầm sang kiến thức môn học hoặc lặp 4 câu gần giống nhau.
-- Tham khảo tháng trước nếu có để thể hiện tiến bộ, duy trì hoặc cần củng cố; không bịa sự tiến bộ khi không có cơ sở.
-- KHÔNG mở đầu bằng “Em”, “Bạn”, tên học sinh, “Nắm”, “Nắm được”, “Nắm vững”. Bắt đầu trực tiếp bằng hành động/kỹ năng như Thực hiện, Đọc, Viết, Nhận biết, Vận dụng, Biết, Có tiến bộ, Bước đầu.
-- Không xuất họ tên hay tên riêng của học sinh. Không dùng “môn học”, “môn Tiếng Việt”, [tên môn] lớp/khối X hay nhãn môn/khối trong câu.
-- Không viết điểm x/10, mức điểm, KHDH, “theo kế hoạch dạy học”, “theo dữ liệu được cung cấp”, tên biến, tên tệp, JSON trong lời nhận xét.
-- Cấm ngôn từ “yếu”, “kém”, “không biết”, “không có khả năng”. Diễn đạt tích cực, hỗ trợ và tự nhiên, mỗi nội dung DƯỚI 250 ký tự.
-- Nếu một nhóm Không chọn, phải để noiDung rỗng; không tự chọn điểm. Mỗi nhóm có điểm cần tạo câu khác nhau phù hợp từng mức riêng.
-- Đa dạng hóa cấu trúc giữa học sinh; không tự thêm kiến thức ngoài căn cứ KHDH. Chỉ trả JSON theo schema. Trường ma luôn để chuỗi rỗng (app tự quản lý điểm).`;
+        const REGULAR_EVAL_SYSTEM_PROMPT=`Bạn là trợ lý hỗ trợ giáo viên tiểu học Việt Nam viết nhận xét đánh giá thường xuyên. CHỈ trả JSON đúng schema.
+MỤC TIÊU MỖI NHẬN XÉT: rõ ý, khách quan, ngắn gọn (TỐI ĐA 250 KÝ TỰ, có thể đúng 250), tự nhiên, nhẹ nhàng, tích cực; nêu trước tiên KỸ NĂNG/VIỆC ĐÃ THỰC HIỆN ĐƯỢC cùng NỘI DUNG KIẾN THỨC CỤ THỂ ĐÃ HỌC; thêm khích lệ duy trì/củng cố nếu có ích. Chỉ 1–2 ý liền mạch, không lan man.
+BÁM KHDH: phải sử dụng chủ đề, tên bài và trọng tâm kiến thức/kỹ năng của CHÍNH MÔN, KHỐI, THÁNG đang chọn. Nếu KHDH nêu "bảng nhân 3, 4" thì nhận xét phải chỉ rõ "bảng nhân 3, 4"/phép nhân tương ứng; không chỉ nói "học tập tốt". KHÔNG lấy nội dung tháng khác, không tự bịa bài/kỹ năng/biểu hiện chưa được cung cấp. Nếu không có KHDH tháng thì diễn đạt thận trọng, không bịa nội dung chuyên biệt.
+DIỄN ĐẠT THEO ĐIỂM RIÊNG TỪNG NHÓM (thang x/10): 9–10 thực hiện chắc, chính xác, linh hoạt (10 hơn 9); 7–8 thực hiện tốt, cần duy trì (8 hơn 7); 5–6 đã thực hiện được yêu cầu cơ bản, cần rèn thêm (6 hơn 5); 2–4 mới bước đầu thực hiện được một phần, khích lệ luyện tập thêm (4 hơn 2). KHÔNG khẳng định thành thạo hay hoàn thành hết nếu điểm thấp. Mỗi nhóm một điểm, mỗi nhóm một câu khác nhau; Năng lực chung/đặc thù, phẩm chất gắn với hành động cụ thể trong hoạt động học theo KHDH, không viết bốn câu lặp nhau.
+THÁNG TRƯỚC: có thể dùng điểm và nhận xét cũ để ghi nhận duy trì/tiến bộ hoặc cần củng cố khi có căn cứ, không lấy kiến thức tháng trước thay cho kiến thức tháng này.
+TUYỆT ĐỐI KHÔNG dùng đại từ/hô ngữ ở bất kỳ vị trí nào: "Em", "Con", "Bạn", "Cháu", "Học sinh", "Các em", "Các bạn", tên/họ tên học sinh; không bắt đầu bằng "Nắm", "Nắm được", "Nắm vững". Từ "con" trong "con đường/con số", "bạn" trong "bạn bè" là danh từ thuộc bài học thì không coi là hô ngữ. Ưu tiên mở đầu bằng "Đọc", "Viết", "Thực hiện", "Nhận biết", "Phân biệt", "Vận dụng", "Tính", "Giải", "Trình bày", "Xác định", "Sử dụng", "Hoàn thành", "Bước đầu".
+CẤM câu sáo rỗng KHÔNG NÊU KỸ NĂNG/KIẾN THỨC như: "Hoàn thành tốt nhiệm vụ học tập", "Có kết quả học tập tốt", "Có tiến bộ trong học tập", "Tiếp thu bài khá tốt", "Thực hiện tốt các yêu cầu", "Cần tiếp tục phát huy". Hạn chế mở đầu bằng "Có ý thức", "Có tiến bộ", "Có khả năng" nếu thiếu hành động và nội dung cụ thể.
+Không viết tên môn/lớp/khối như một nhãn ("môn học", "Toán lớp 3", "Tiếng Việt khối 3"...), điểm số, mức điểm, KHDH, kế hoạch dạy học, thông tin kỹ thuật, JSON/tên file trong câu. Không dùng "yếu", "kém", "không biết", "không có khả năng". Không dùng dấu phẩy để ghép quá nhiều ý.
+Nếu nhóm Không chọn thì noiDung rỗng, không tự đoán điểm. Trường ma để rỗng; điểm được lưu riêng trong ứng dụng. TỰ SOÁT câu có kỹ năng cụ thể, đúng tháng/KHDH, không hô ngữ, <=250 ký tự TRƯỚC KHI TRẢ JSON.`;
         function buildRegularEvaluationGeminiBody(payload){
             return {contents:[{parts:[{text:String(payload.prompt||'')}]}],systemInstruction:{parts:[{text:REGULAR_EVAL_SYSTEM_PROMPT}]},generationConfig:{responseMimeType:'application/json',responseJsonSchema:regularEvalJsonSchema(),maxOutputTokens:1300,thinkingConfig:{thinkingLevel:getGameGeminiModel()==='gemini-3.7-flash'?'low':'minimal'}}};
         }
@@ -2401,40 +2398,73 @@ NGUYÊN TẮC BẮT BUỘC:
         function regularEvalHasInvalidLevels(ev){return !!(ev?.validationErrors&&REGULAR_EVAL_LEVEL_FIELDS.some(field=>ev.validationErrors[field]));}
         function regularEvalNormalizeCommentText(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase().replace(/\s+/g,' ').trim();}
         function regularEvalEscapeRegExp(value){return String(value).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+        // Kiểm tra chất lượng lời nhận xét tạo bởi AI. Không cắt câu hoặc sửa từ tự động:
+        // nếu thiếu căn cứ KHDH, Gemini phải viết lại riêng nhận xét đó.
+        const REGULAR_EVAL_CONTEXT_STOPWORDS=new Set('bai tiet chu de lop khoi thang tuan nam hoc hoat dong phan mon noi dung yeu cau can dat thuc hien duoc hoan thanh tot kha cac nhung mot hai ba theo cua va voi trong cho tren duoi o tu den la se da di hay biet ren luyen tap chung on kien thuc ky nang phat huy tiep tuc giu nang luc pham chat chu yeu'.split(' '));
+        let regularEvalEvidenceCache=null;
+        function regularEvalContentTokens(value){
+            return [...new Set((regularEvalNormalizeCommentText(value).match(/[a-z0-9]+/g)||[])
+                .filter(token=>(token.length>=3||/^\d+$/.test(token))&&!REGULAR_EVAL_CONTEXT_STOPWORDS.has(token)))];
+        }
+        function regularEvalKhdhEvidence(){
+            const r=regularEvalState(),key=regularEvalKhdhDocumentKey(),doc=r.khdhDocuments?.[key];
+            const legacy=doc?'':String(r.khdhMap?.[regularEvalKhdhKey()]||'');
+            const context=regularEvalContextKey()+'|'+regularEvalKhdhWeekOne();
+            if(regularEvalEvidenceCache?.context===context && regularEvalEvidenceCache.records===doc?.records && regularEvalEvidenceCache.legacy===legacy)return regularEvalEvidenceCache.entries;
+            const view=doc?regularEvalKhdhView():null;
+            const lines=view?.topics?.flatMap(topic=>(topic.lessons||[]).map(lesson=>
+                [topic.name,lesson.lessonName,lesson.focus].filter(Boolean).join(' '))) ||
+                legacy.split(/\n|[;]+/).map(line=>line.trim()).filter(Boolean);
+            // Một bài cần có ít nhất 2 từ khóa đặc trưng mới kiểm tra tự động được.
+            const entries=lines.map(line=>({source:line,tokens:regularEvalContentTokens(line)})).filter(e=>e.tokens.length>=2);
+            regularEvalEvidenceCache={context,records:doc?.records,legacy,entries};
+            return entries;
+        }
+        function regularEvalKhdhRelevance(text){
+            const evidence=regularEvalKhdhEvidence();
+            if(!evidence.length)return {valid:true,reason:''}; // KHDH thiếu/trống: không được tự phán đoán sự phù hợp.
+            const candidate=new Set(regularEvalContentTokens(text));
+            const linked=evidence.some(entry=>{
+                const shared=entry.tokens.filter(token=>candidate.has(token));
+                return shared.length>=2 && shared.some(token=>/^[a-z]+$/.test(token));
+            });
+            return {valid:linked,reason:'Chưa liên hệ rõ kỹ năng/nội dung với Chủ đề hoặc Bài học KHDH của đúng tháng (cần nêu ít nhất một chi tiết cụ thể)'};
+        }
         function validateGeneratedComment(comment,student=null){
             const text=String(comment??'').trim(),norm=regularEvalNormalizeCommentText(text),errors=[];
             if(!text)return {valid:false,errors:['Nội dung trống']};
-            if(text.length>=250)errors.push('Từ 250 ký tự trở lên');
+            if(text.length>250)errors.push('Vượt quá 250 ký tự');
             const bound=word=>new RegExp(`(?<![\\p{L}\\p{N}])${word}(?![\\p{L}\\p{N}])`,'iu');
-            const pronouns=['em','cháu','học sinh','các em','các cháu','các bạn'];
+            const pronouns=['em','cháu','học sinh','các em','các cháu','các bạn','tôi','mình','chúng ta','chúng tôi','chúng mình'];
             const useBan=[...text.matchAll(/(?<![\p{L}\p{N}])bạn(?![\p{L}\p{N}])/giu)].some(match=>!/^\s+bè(?=$|[^\p{L}])/iu.test(text.slice(match.index+match[0].length)));
-            if(pronouns.some(word=>bound(word).test(text))||useBan)errors.push('Có hô ngữ/đại từ nhân xưng (Em, Cháu, Bạn, Học sinh...)');
-            // 'Con đường', 'con số', 'con vật' là danh từ, không phải đại từ xưng hô.
+            if(pronouns.some(word=>bound(word).test(text))||useBan)errors.push('Có hô ngữ/đại từ nhân xưng (Em, Con, Bạn, Cháu, Học sinh...)');
+            // "con đường", "con số", "bạn bè" có thể là nội dung KHDH, không phải hô ngữ.
             const conWords=[...text.matchAll(/(?<![\p{L}\p{N}])con(?![\p{L}\p{N}])/giu)];
-            if(conWords.some(match=>!/^\s+(?:đường|số|chữ|vật|người|suối|sông|dốc|thuyền|tàu|cá|chim|mèo|chó|trâu|bò|ngựa|gà|vịt|ong|kiến|hổ|voi|khỉ|bướm|ốc|sâu|đèo|phố|hẻm|ngõ|mắt|tim|tóc|lắc)(?=$|[^\p{L}])/iu.test(text.slice(match.index+match[0].length)))){
-                errors.push('Có đại từ xưng hô Con');
-            }
+            if(conWords.some(match=>!/^\s+(?:đường|số|chữ|vật|người|suối|sông|dốc|thuyền|tàu|cá|chim|mèo|chó|trâu|bò|ngựa|gà|vịt|ong|kiến|hổ|voi|khỉ|bướm|ốc|sâu|đèo|phố|hẻm|ngõ|mắt|tim|tóc|lắc)(?=$|[^\p{L}])/iu.test(text.slice(match.index+match[0].length))))errors.push('Có đại từ xưng hô Con');
             if(/^nắm(?=$|[^\p{L}])/iu.test(text))errors.push('Mở đầu bằng Nắm');
             if(/(?:^|[^\p{L}])môn(?:\s+học|\s+(?:tiếng|toán|ngoại|khoa|đạo|tin|công|lịch|tự|giáo|nghệ|hoạt))(?=$|[^\p{L}]|\s)/iu.test(text)||
-               /(?:^|\s)(?:mon hoc|mon tieng viet|mon toan|ke hoach day hoc|theo du lieu duoc cung cap|khdh)(?:\s|[.,:;!?]|$)/i.test(norm)){
-                errors.push('Chứa nhãn môn học hoặc KHDH');
-            }
+                /(?:^|\s)(?:mon hoc|mon tieng viet|mon toan|ke hoach day hoc|theo du lieu duoc cung cap|khdh)(?:\s|[.,:;!?]|$)/i.test(norm))errors.push('Chứa nhãn môn học hoặc KHDH');
             const subjectNames=REGULAR_EVAL_SUBJECTS.flatMap(s=>[s.name,s.sheetName,...(s.aliases||[])]);
             const containsSubjectClass=subjectNames.some(name=>{
                 const key=regularEvalNormalizeCommentText(name).replace(/[^a-z0-9 ]/g,'').trim();
-                return key&&norm.includes(key+' lop ')||key&&norm.includes(key+' khoi ');
+                return !!key&&(norm.includes(key+' lop ')||norm.includes(key+' khoi '));
             });
             if(containsSubjectClass||/(?:^|\s)(?:tieng viet|toan|khoa hoc|dao duc|lich su va dia li|ngoai ngu|tin hoc|cong nghe|am nhac|mi thuat) (?:khoi|lop) [1-5](?:\s|[.,:;!?]|$)/i.test(norm))errors.push('Chứa tên môn kèm lớp/khối');
             if(/(?:^|[^a-z0-9])(?:diem\s*\d{1,2}|muc\s*\d{1,2}|\d{1,2}\s*\/\s*10)(?:$|[^a-z0-9])/i.test(norm))errors.push('Lộ điểm số');
-            if(/(?:^|\W)(?:yeu|kem|khong biet|khong co kha nang)(?:\W|$)/i.test(norm))errors.push('Ngôn từ thiếu khích lệ');
+            if(/(?:^|[^\p{L}])(?:yếu|kém)(?=$|[^\p{L}])/iu.test(text)||/(?:^|\W)(?:khong biet|khong co kha nang)(?:\W|$)/i.test(norm))errors.push('Ngôn từ thiếu khích lệ');
             if(/```|[{}]|\bjson\b|\b(?:studentid|monhocscore|nlcscore|nldtscore|pcscore)\b|\b[^\s]+\.(?:pdf|docx?|xlsx?|csv)\b/i.test(norm))errors.push('Lộ dữ liệu kỹ thuật');
             if(student?.name){
-                const full=String(student.name).trim().replace(/\s+/g,' ');
-                const tokens=full.split(' ').filter(Boolean);
+                const full=String(student.name).trim().replace(/\s+/g,' '),tokens=full.split(' ').filter(Boolean);
                 const given=tokens.length>=2?tokens.at(-1):'';
                 const nameInText=part=>part&&new RegExp(`(?<![\\p{L}\\p{N}])${regularEvalEscapeRegExp(part)}(?![\\p{L}\\p{N}])`,'iu').test(text);
                 if(nameInText(full)||(given.length>=2&&nameInText(given)))errors.push('Chứa tên học sinh');
             }
+            // Câu chỉ nêu thành tích/thái độ chung không đủ căn cứ đánh giá kiến thức của tháng.
+            const generic=/(?:^|[.;]\s*)(?:hoan thanh (?:tot |kha |duoc )?(?:cac )?(?:nhiem vu|noi dung|yeu cau)(?: hoc tap)?|co ket qua hoc tap (?:rat )?(?:tot|kha)|tiep thu bai (?:rat )?(?:tot|kha)|co tien bo (?:trong )?hoc tap|thuc hien (?:tot|duoc) cac yeu cau|can tiep tuc phat huy)(?:[.!;]|$)/i;
+            if(generic.test(norm)||/^(?:co y thuc|co tien bo|co kha nang)(?:\s+(?:tot|kha|trong hoc tap|hoc tap))?[.!]?$/i.test(norm))errors.push('Nhận xét chung chung, chưa nêu rõ kiến thức hoặc kỹ năng đã thực hiện');
+            if((norm.match(/[.;!?]/g)||[]).length>=4||text.split(/[;,]/).filter(part=>part.trim()).length>3)errors.push('Quá nhiều ý trong một lời nhận xét');
+            const relevance=regularEvalKhdhRelevance(text);
+            if(!relevance.valid)errors.push(relevance.reason);
             return {valid:errors.length===0,errors};
         }
         function sanitizeGeneratedComment(comment){return String(comment??'').trim().replace(/^['“”]+|['“”]+$/g,'').trim();}
@@ -2490,18 +2520,20 @@ NGUYÊN TẮC BẮT BUỘC:
             return r.evaluations.some(ev=>String(ev.studentId)!==String(studentId)&&String(ev.schoolYear)===String(regularEvalSchoolYear())&&Number(ev.month)===Number(r.settings.month)&&ev.subjectId===r.settings.subjectId&&regularEvalNormalizeCommentText(ev[group.textField])===normalized);
         }
         async function regularEvalGenerateComment(student, levels,requestedGroupKeys=null){
-            const r=regularEvalState(),subject=regularEvalSubject(),khdh=regularEvalKhdhContext(),previousMonth=regularEvalPreviousMonth(r.settings.month);
+            const r=regularEvalState(),contextAtStart=regularEvalContextKey(),subject=regularEvalSubject(),khdh=regularEvalKhdhContext(),previousMonth=regularEvalPreviousMonth(r.settings.month);
             const previous=previousMonth===null?null:regularEvalGetEvaluation(student.id,previousMonth,r.settings.subjectId,regularEvalSchoolYear());
             const previousText=regularEvalEvaluationText(previous),previousLevels=regularEvalResolveLevels(previous);
             const variation=String(student.id).split('').reduce((a,c)=>a+c.charCodeAt(0),0)%97;
             const requested=new Set(Array.isArray(requestedGroupKeys)&&requestedGroupKeys.length?requestedGroupKeys:REGULAR_EVAL_GROUPS.map(group=>group.key));
             const accepted={},issues=[];
             for(let attempt=1;attempt<=REGULAR_EVAL_MAX_RETRIES;attempt++){
+                if(regularEvalContextKey()!==contextAtStart)throw new Error('Đã đổi lớp, môn hoặc tháng trong lúc AI xử lý; bỏ kết quả cũ để tránh ghi nhầm giai đoạn.');
                 const wanted=REGULAR_EVAL_GROUPS.filter(group=>requested.has(group.key)&&levels[group.key]!==null&&!accepted[group.key]);
                 if(!wanted.length)break;
                 const gradeFor=key=>regularEvalScoreLabel(levels[key]);
-                const prompt=`KHỐI: ${r.settings.grade}\nMÔN: ${subject.name}\nTHÁNG: ${r.settings.month}\nNĂM HỌC: ${regularEvalSchoolYear()}\nCÁC NHÓM CẦN VIẾT: ${wanted.map(group=>group.label).join('; ')}\nĐIỂM MÔN HỌC: ${gradeFor('monHoc')}\nĐIỂM NĂNG LỰC CHUNG: ${gradeFor('nangLucChung')}\nĐIỂM NĂNG LỰC ĐẶC THÙ: ${gradeFor('nangLucDacThu')}\nĐIỂM PHẨM CHẤT: ${gradeFor('phamChat')}\nBIẾN THỂ NGÔN NGỮ: ${variation}\n\nĐIỂM THÁNG TRƯỚC (nếu có): ${REGULAR_EVAL_GROUPS.map(g=>`${g.label}: ${regularEvalScoreLabel(previousLevels[g.key])}`).join('; ')}\nNHẬN XÉT THÁNG TRƯỚC: ${previousText||'Không có.'}\n\nKHDH THÁNG HIỆN TẠI (căn cứ ưu tiên):\n${khdh.trim()||'Chưa được cung cấp. Chỉ viết thận trọng dựa vào bối cảnh môn/khối, không bịa bài học cụ thể.'}\n\nViết riêng từng nhóm được yêu cầu theo điểm riêng, dựa trực tiếp vào bài/chủ điểm/kỹ năng trong KHDH nếu có. Mọi nhóm khác dù có điểm vẫn trả noiDung rỗng. Trường ma để trống. Nhóm Không chọn trả noiDung rỗng. Không dùng ở BẤT KỲ vị trí nào các từ xưng hô Em, Con, Bạn, Cháu, Học sinh, Các em; không được mở đầu bằng Nắm; viết trực tiếp vào kỹ năng, giữ tên bài đúng KHDH khi phù hợp. Không viết tên học sinh. ${attempt>1?`LẦN SỬA ${attempt}: Các lời nhận xét trước vi phạm: ${issues.slice(-8).join(' | ')}. Hãy viết lại hoàn toàn, tránh các lỗi này.`:''}`;
+                const prompt=`KHỐI: ${r.settings.grade}\nMÔN: ${subject.name}\nTHÁNG: ${r.settings.month}\nNĂM HỌC: ${regularEvalSchoolYear()}\nCÁC NHÓM CẦN VIẾT: ${wanted.map(group=>group.label).join('; ')}\nĐIỂM MÔN HỌC: ${gradeFor('monHoc')}\nĐIỂM NĂNG LỰC CHUNG: ${gradeFor('nangLucChung')}\nĐIỂM NĂNG LỰC ĐẶC THÙ: ${gradeFor('nangLucDacThu')}\nĐIỂM PHẨM CHẤT: ${gradeFor('phamChat')}\nBIẾN THỂ NGÔN NGỮ: ${variation}\n\nĐIỂM THÁNG TRƯỚC (nếu có): ${REGULAR_EVAL_GROUPS.map(g=>`${g.label}: ${regularEvalScoreLabel(previousLevels[g.key])}`).join('; ')}\nNHẬN XÉT THÁNG TRƯỚC: ${previousText||'Không có.'}\n\nKHDH THÁNG HIỆN TẠI (căn cứ ưu tiên):\n${khdh.trim()||'Chưa được cung cấp. Chỉ viết thận trọng dựa vào bối cảnh môn/khối, không bịa bài học cụ thể.'}\n\nViết ngắn gọn TỐI ĐA 250 ký tự, nêu hành động đã thực hiện được và CHI TIẾT KIẾN THỨC CỤ THỂ của bài/chủ điểm/kỹ năng trong KHDH THÁNG NÀY; thể hiện mức Hoàn thành phù hợp điểm và khích lệ duy trì/củng cố. Không viết chung chung kiểu 'Có kết quả học tập tốt', 'Hoàn thành tốt nhiệm vụ học tập', 'Cần tiếp tục phát huy' mà không có nội dung cụ thể. Mọi nhóm khác dù có điểm vẫn trả noiDung rỗng. Trường ma để trống. Nhóm Không chọn trả noiDung rỗng. Không dùng ở BẤT KỲ vị trí nào các từ xưng hô Em, Con, Bạn, Cháu, Học sinh, Các em; không được mở đầu bằng Nắm; viết trực tiếp vào kỹ năng, giữ tên bài đúng KHDH khi phù hợp. Không viết tên học sinh. ${attempt>1?`LẦN SỬA ${attempt}: Các lời nhận xét trước vi phạm: ${issues.slice(-8).join(' | ')}. Hãy viết lại hoàn toàn, tránh các lỗi này.`:''}`;
                 const raw=await callGameGeminiApi({action:'regular-evaluation-comment',prompt});
+                if(regularEvalContextKey()!==contextAtStart)throw new Error('Lớp, môn hoặc tháng đã thay đổi; không sử dụng nhận xét của ngữ cảnh cũ.');
                 if(raw?.model)localStorage.setItem(GAME_GEMINI_MODEL_STORAGE,raw.model);
                 const result=normalizeRegularEvaluationAiResult(raw?.result||{});
                 for(const group of wanted){
@@ -2550,18 +2582,21 @@ NGUYÊN TẮC BẮT BUỘC:
                 return showToast(firstScan.remaining.length?`Còn ${firstScan.remaining.length} học sinh thiếu điểm, nội dung hoặc đang khóa.`:`Đã hoàn thành ${firstScan.completed}/${firstScan.total} học sinh`,firstScan.remaining.length?'error':'success');
             }
             if(!onlyMissing&&!confirm(`Bổ sung và kiểm tra nhận xét AI cho ${initialTargets.length} học sinh?\nKhông ghi đè lời nhận xét hợp lệ hoặc đang khóa.`))return;
-            const rt=window.regularEvaluationRuntime;rt.bulkRunning=true;rt.bulkSummary=null;
+            const rt=window.regularEvaluationRuntime,bulkContext=regularEvalContextKey();rt.bulkRunning=true;rt.bulkSummary=null;
             try{
                 for(let attempt=1;attempt<=REGULAR_EVAL_MAX_RETRIES;attempt++){
+                    if(regularEvalContextKey()!==bulkContext)break;
                     const scan=regularEvalScanCompletion(students);
                     const pending=scan.remaining.filter(item=>!item.ev.isLocked&&!regularEvalHasInvalidLevels(item.ev)&&item.missingGroups.length);
                     if(!pending.length)break;
                     for(let i=0;i<pending.length;i++){
+                        if(regularEvalContextKey()!==bulkContext)break;
                         const item=regularEvalStudentCompletion(pending[i].student),groupKeys=item.missingGroups.map(group=>group.key);
                         if(!groupKeys.length)continue;
                         regularEvalSetLoading(`AI toàn lớp · lượt ${attempt}/${REGULAR_EVAL_MAX_RETRIES}\n${i+1}/${pending.length} · ${item.student.name}\nĐang xử lý ${groupKeys.length} nhóm`);
                         try{
                             const result=await regularEvalGenerateComment(item.student,item.levels,groupKeys);
+                            if(regularEvalContextKey()!==bulkContext)break;
                             regularEvalApplyAiResult(item.ev,result,item.levels,item.student,groupKeys,true);
                             await saveData();
                         }catch(err){console.error('Lỗi tạo nhận xét:',item.student.name,err);}
@@ -2574,7 +2609,8 @@ NGUYÊN TẮC BẮT BUỘC:
             }finally{
                 rt.bulkRunning=false;regularEvalSetLoading('');
                 const finalScan=regularEvalScanCompletion(students);rt.bulkSummary={...finalScan,contextKey:regularEvalContextKey()};renderLayout();
-                if(!finalScan.remaining.length)showToast(`Đã hoàn thành: ${finalScan.completed}/${finalScan.total} học sinh`,'success');
+                if(regularEvalContextKey()!==bulkContext)showToast('Đã đổi lớp, môn hoặc tháng; dừng AI toàn lớp để tránh ghi nhầm nội dung.','error');
+                else if(!finalScan.remaining.length)showToast(`Đã hoàn thành: ${finalScan.completed}/${finalScan.total} học sinh`,'success');
                 else showToast(`Còn ${finalScan.remaining.length} học sinh thiếu điểm, nội dung không hợp lệ hoặc đang khóa. Xem bảng thông báo phía trên.`,'error');
             }
         };
@@ -2596,10 +2632,11 @@ NGUYÊN TẮC BẮT BUỘC:
             });
             if(!tasks.length)return showToast('Không có nhận xét chưa khóa nào cần chuẩn hóa trong môn/tháng này.','success');
             if(!confirm(`Chuẩn hóa ${tasks.length} nhận xét chưa đạt quy tắc của ${r.settings.className}, ${regularEvalSubject().name}, tháng ${r.settings.month}?\nCác nhận xét đã khóa sẽ được giữ nguyên. AI sẽ viết lại nhưng không thay đổi mức điểm.`))return;
-            rt.bulkRunning=true;let changed=0,failed=0;
+            rt.bulkRunning=true;const normalizeContext=regularEvalContextKey();let changed=0,failed=0;
             try{
                 const khdh=regularEvalKhdhContext(),subject=regularEvalSubject();
                 for(let i=0;i<tasks.length;i++){
+                    if(regularEvalContextKey()!==normalizeContext)break;
                     const {student,ev,group,old}=tasks[i];
                     if(ev.isLocked||ev[group.textField]!==old)continue;
                     let written='';const issues=[];
@@ -2609,6 +2646,7 @@ NGUYÊN TẮC BẮT BUỘC:
                         const prompt=`NHIỆM VỤ: VIẾT LẠI MỘT NHẬN XÉT CŨ, KHÔNG TẠO ĐÁNH GIÁ MỚI.\nKHỐI: ${r.settings.grade}\nMÔN: ${subject.name}\nTHÁNG: ${r.settings.month}\nNHÓM: ${group.label}\nĐIỂM THANG 10 (nếu có): ${value===null?'Không có điểm, tuyệt đối không suy đoán':regularEvalScoreLabel(value)}\nNHẬN XÉT CŨ CẦN GIỮ NGUYÊN Ý NGHĨA: ${old}\nKHDH THÁNG NÀY (chỉ để kiểm tra sự phù hợp):\n${khdh||'Chưa có KHDH'}\n\nChỉ viết lại câu cũ cho khách quan, bắt đầu bằng kỹ năng/hành động. Tuyệt đối không có ở BẤT KỲ vị trí nào các từ xưng hô: Em, Con, Bạn, Cháu, Học sinh, Các em; không tên học sinh, không nhãn tên môn/lớp, không nhắc điểm hoặc KHDH. DƯỚI 250 ký tự. KHÔNG thêm thành tích, bài học hoặc lỗi chưa có trong lời cũ; nếu thiếu căn cứ, chỉ diễn đạt lại câu gốc. Chỉ điền noiDung vào nhóm ${group.key}; các nhóm khác trả noiDung rỗng, mọi ma rỗng.${issues.length?`\nPHẢI SỬA LỖI TRƯỚC: ${issues.join('; ')}`:''}`;
                         try{
                             const raw=await callGameGeminiApi({action:'regular-evaluation-comment',prompt});
+                            if(regularEvalContextKey()!==normalizeContext)break;
                             if(raw?.model)localStorage.setItem(GAME_GEMINI_MODEL_STORAGE,raw.model);
                             const result=normalizeRegularEvaluationAiResult(raw?.result||{});
                             const candidate=sanitizeGeneratedComment(result[group.key]?.noiDung);
@@ -2617,7 +2655,7 @@ NGUYÊN TẮC BẮT BUỘC:
                         }catch(error){issues.push(String(error?.message||error));}
                         if(!written&&attempt<REGULAR_EVAL_MAX_RETRIES)await new Promise(resolve=>setTimeout(resolve,REGULAR_EVAL_RETRY_DELAY_MS));
                     }
-                    if(written){
+                    if(written&&!ev.isLocked&&regularEvalContextKey()===normalizeContext&&ev[group.textField]===old){
                         ev[group.textField]=written;
                         if(ev.aiCommentScores)delete ev.aiCommentScores[group.textField];
                         changed++;await saveData();
@@ -2625,7 +2663,7 @@ NGUYÊN TẮC BẮT BUỘC:
                 }
             }finally{
                 rt.bulkRunning=false;regularEvalSetLoading('');rt.bulkSummary=null;renderLayout();
-                showToast(`Đã chuẩn hóa ${changed} nhận xét; ${failed} nhận xét chưa đạt được giữ nguyên để kiểm tra.`,failed?'error':'success');
+                showToast(regularEvalContextKey()!==normalizeContext?`Đã đổi lớp/môn/tháng: dừng chuẩn hóa. Đã lưu ${changed} câu hợp lệ.`:`Đã chuẩn hóa ${changed} nhận xét; ${failed} nhận xét chưa đạt được giữ nguyên để kiểm tra.`,failed||regularEvalContextKey()!==normalizeContext?'error':'success');
             }
         };
 
