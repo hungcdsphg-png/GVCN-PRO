@@ -2374,7 +2374,9 @@
             return {monHoc:norm(obj.monHoc),nangLucChung:norm(obj.nangLucChung),nangLucDacThu:norm(obj.nangLucDacThu),phamChat:norm(obj.phamChat)};
         }
         const REGULAR_EVAL_SYSTEM_PROMPT=`Bạn là trợ lý hỗ trợ giáo viên tiểu học Việt Nam viết nhận xét đánh giá thường xuyên. CHỈ trả JSON đúng schema.
-MỤC TIÊU MỖI NHẬN XÉT: rõ ý, khách quan, ngắn gọn (TỐI ĐA 250 KÝ TỰ, có thể đúng 250), tự nhiên, nhẹ nhàng, tích cực; nêu trước tiên KỸ NĂNG/VIỆC ĐÃ THỰC HIỆN ĐƯỢC cùng NỘI DUNG KIẾN THỨC CỤ THỂ ĐÃ HỌC; thêm khích lệ duy trì/củng cố nếu có ích. Chỉ 1–2 ý liền mạch, không lan man.
+MỤC TIÊU MỖI NHẬN XÉT: rõ ý, khách quan, ngắn gọn (TỐI ĐA 250 KÝ TỰ, có thể đúng 250), tự nhiên, nhẹ nhàng, tích cực. Mỗi nhận xét gồm HAI VẾ LIÊN KẾT: (1) nêu cụ thể điều đã làm được hoặc bước đầu làm được trong KHDH; (2) góp ý một việc cần rèn thêm hoặc khuyến khích duy trì/phát huy có gắn với chính kỹ năng đó. Ngăn cách tự nhiên bằng dấu chấm phẩy, chẳng hạn “...; tuy nhiên, cần ...” hoặc “...; tiếp tục ...”. Không ghép quá nhiều ý.
+MẪU CÁCH VIẾT (chỉ dùng khi KHDH thực tế có nội dung tương ứng): “Rút ra được bài học về thái độ trân trọng người lao động; tuy nhiên, cần mạnh dạn hơn khi bày tỏ suy nghĩ về vai trò của người lao động.” Không dùng cụm thừa “Biết rút ra được”; không sao chép ví dụ khi KHDH khác.
+QUY TẮC GÓP Ý THEO ĐIỂM: Điểm 2–8: sau vế ghi nhận, nêu việc cần tiếp tục rèn hoặc củng cố có liên hệ đúng nội dung đang học; có thể mở vế sau bằng “Tuy nhiên, cần ...”. Điểm 9–10: sau vế ghi nhận, khuyến khích “tiếp tục duy trì”, “tiếp tục phát huy” một kỹ năng cụ thể; không bịa ra hạn chế để ép sử dụng “tuy nhiên”. Tuyệt đối không tự suy diễn lỗi/hành vi riêng của học sinh khi chỉ có điểm số, mà viết định hướng rèn luyện phù hợp KHDH.
 BÁM KHDH: phải sử dụng chủ đề, tên bài và trọng tâm kiến thức/kỹ năng của CHÍNH MÔN, KHỐI, THÁNG đang chọn. Nếu KHDH nêu "bảng nhân 3, 4" thì nhận xét phải chỉ rõ "bảng nhân 3, 4"/phép nhân tương ứng; không chỉ nói "học tập tốt". KHÔNG lấy nội dung tháng khác, không tự bịa bài/kỹ năng/biểu hiện chưa được cung cấp. Nếu không có KHDH tháng thì diễn đạt thận trọng, không bịa nội dung chuyên biệt.
 DIỄN ĐẠT THEO ĐIỂM RIÊNG TỪNG NHÓM (thang x/10): 9–10 thực hiện chắc, chính xác, linh hoạt (10 hơn 9); 7–8 thực hiện tốt, cần duy trì (8 hơn 7); 5–6 đã thực hiện được yêu cầu cơ bản, cần rèn thêm (6 hơn 5); 2–4 mới bước đầu thực hiện được một phần, khích lệ luyện tập thêm (4 hơn 2). KHÔNG khẳng định thành thạo hay hoàn thành hết nếu điểm thấp. Mỗi nhóm một điểm, mỗi nhóm một câu khác nhau; Năng lực chung/đặc thù, phẩm chất gắn với hành động cụ thể trong hoạt động học theo KHDH, không viết bốn câu lặp nhau.
 THÁNG TRƯỚC: có thể dùng điểm và nhận xét cũ để ghi nhận duy trì/tiến bộ hoặc cần củng cố khi có căn cứ, không lấy kiến thức tháng trước thay cho kiến thức tháng này.
@@ -2433,7 +2435,21 @@ Nếu nhóm Không chọn thì noiDung rỗng, không tự đoán điểm. Trư�
             });
             return {valid:linked,reason:'Chưa liên hệ rõ kỹ năng/nội dung với Chủ đề hoặc Bài học KHDH của đúng tháng (cần nêu ít nhất một chi tiết cụ thể)'};
         }
-        function validateGeneratedComment(comment,student=null){
+        // Chỉ siết cấu trúc hai vế cho kết quả AI mới/nhận xét do giáo viên chủ động chuẩn hóa.
+        // Không coi dữ liệu nhận xét cũ là thiếu chỉ vì khác phong cách viết mới.
+        function regularEvalConstructiveStyleCheck(comment,score){
+            const text=String(comment||'').trim();
+            const parts=text.split(/\s*;\s*|[.!?]\s+(?=[\p{Lu}])/u).map(v=>v.trim()).filter(Boolean);
+            if(parts.length!==2)return {valid:false,reason:'Cần hai vế: kỹ năng đã làm được; góp ý rèn luyện hoặc duy trì kỹ năng đó'};
+            const second=regularEvalNormalizeCommentText(parts[1]);
+            const first=regularEvalNormalizeCommentText(parts[0]);
+            const suggested=/^(?:tuy nhien[, ]+|can\s+|tiep tuc\s+|nen\s+|dong thoi[, ]+|ben canh do[, ]+|duy tri\s+|phat huy\s+)/i;
+            if(!suggested.test(second))return {valid:false,reason:'Vế sau phải nêu rõ việc cần rèn hoặc duy trì, ví dụ “tuy nhiên, cần…”'};
+            if(!first||first.split(/\s+/).length<5||second.split(/\s+/).length<4)return {valid:false,reason:'Hai vế cần diễn đạt đủ một kỹ năng và hướng rèn luyện cụ thể'};
+            if(typeof score==='number'&&score>=9&&/^(?:tuy nhien|can (?:co gang|manh dan|ren|luyen|khac phuc))/i.test(second))return {valid:false,reason:'Với điểm 9–10, ưu tiên hướng duy trì/phát huy; không suy đoán hạn chế'};
+            return {valid:true,reason:''};
+        }
+        function validateGeneratedComment(comment,student=null,options=null){
             const text=String(comment??'').trim(),norm=regularEvalNormalizeCommentText(text),errors=[];
             if(!text)return {valid:false,errors:['Nội dung trống']};
             if(text.length>250)errors.push('Vượt quá 250 ký tự');
@@ -2465,7 +2481,11 @@ Nếu nhóm Không chọn thì noiDung rỗng, không tự đoán điểm. Trư�
             // Câu chỉ nêu thành tích/thái độ chung không đủ căn cứ đánh giá kiến thức của tháng.
             const generic=/(?:^|[.;]\s*)(?:hoan thanh (?:tot |kha |duoc )?(?:cac )?(?:nhiem vu|noi dung|yeu cau)(?: hoc tap)?|co ket qua hoc tap (?:rat )?(?:tot|kha)|tiep thu bai (?:rat )?(?:tot|kha)|co tien bo (?:trong )?hoc tap|thuc hien (?:tot|duoc) cac yeu cau|can tiep tuc phat huy)(?:[.!;]|$)/i;
             if(generic.test(norm)||/^(?:co y thuc|co tien bo|co kha nang)(?:\s+(?:tot|kha|trong hoc tap|hoc tap))?[.!]?$/i.test(norm))errors.push('Nhận xét chung chung, chưa nêu rõ kiến thức hoặc kỹ năng đã thực hiện');
-            if((norm.match(/[.;!?]/g)||[]).length>=4||text.split(/[;,]/).filter(part=>part.trim()).length>3)errors.push('Quá nhiều ý trong một lời nhận xét');
+            if(text.split(/;|[.!?]\s+(?=[\p{Lu}])/u).filter(part=>part.trim()).length>2)errors.push('Quá nhiều ý trong một lời nhận xét');
+            if(options?.requireConstructiveStyle){
+                const structure=regularEvalConstructiveStyleCheck(text,options.score);
+                if(!structure.valid)errors.push(structure.reason);
+            }
             const relevance=regularEvalKhdhRelevance(text);
             if(!relevance.valid)errors.push(relevance.reason);
             return {valid:errors.length===0,errors};
@@ -2490,7 +2510,7 @@ Nếu nhóm Không chọn thì noiDung rỗng, không tự đoán điểm. Trư�
                 if(levels[group.key]===null)return;
                 if(preserveExisting&&validateGeneratedComment(ev[group.textField],student).valid&&ev.aiCommentScores?.[group.textField]===undefined || preserveExisting&&validateGeneratedComment(ev[group.textField],student).valid&&ev.aiCommentScores?.[group.textField]===levels[group.key])return;
                 const generated=sanitizeGeneratedComment(result?.[group.key]?.noiDung||'');
-                if(!validateGeneratedComment(generated,student).valid)return;
+                if(!validateGeneratedComment(generated,student,{requireConstructiveStyle:true,score:levels[group.key]}).valid)return;
                 ev[group.textField]=generated;if(!ev.aiCommentScores)ev.aiCommentScores={};ev.aiCommentScores[group.textField]=levels[group.key];changed++;
             });
             return changed;
@@ -2534,14 +2554,14 @@ Nếu nhóm Không chọn thì noiDung rỗng, không tự đoán điểm. Trư�
                 const wanted=REGULAR_EVAL_GROUPS.filter(group=>requested.has(group.key)&&levels[group.key]!==null&&!accepted[group.key]);
                 if(!wanted.length)break;
                 const gradeFor=key=>regularEvalScoreLabel(levels[key]);
-                const prompt=`KHỐI: ${r.settings.grade}\nMÔN: ${subject.name}\nTHÁNG: ${r.settings.month}\nNĂM HỌC: ${regularEvalSchoolYear()}\nCÁC NHÓM CẦN VIẾT: ${wanted.map(group=>group.label).join('; ')}\nĐIỂM MÔN HỌC: ${gradeFor('monHoc')}\nĐIỂM NĂNG LỰC CHUNG: ${gradeFor('nangLucChung')}\nĐIỂM NĂNG LỰC ĐẶC THÙ: ${gradeFor('nangLucDacThu')}\nĐIỂM PHẨM CHẤT: ${gradeFor('phamChat')}\nBIẾN THỂ NGÔN NGỮ: ${variation}\n\nĐIỂM THÁNG TRƯỚC (nếu có): ${REGULAR_EVAL_GROUPS.map(g=>`${g.label}: ${regularEvalScoreLabel(previousLevels[g.key])}`).join('; ')}\nNHẬN XÉT THÁNG TRƯỚC: ${previousText||'Không có.'}\n\nKHDH THÁNG HIỆN TẠI (căn cứ ưu tiên):\n${khdh.trim()||'Chưa được cung cấp. Chỉ viết thận trọng dựa vào bối cảnh môn/khối, không bịa bài học cụ thể.'}\n\nViết ngắn gọn TỐI ĐA 250 ký tự, nêu hành động đã thực hiện được và CHI TIẾT KIẾN THỨC CỤ THỂ của bài/chủ điểm/kỹ năng trong KHDH THÁNG NÀY; thể hiện mức Hoàn thành phù hợp điểm và khích lệ duy trì/củng cố. Không viết chung chung kiểu 'Có kết quả học tập tốt', 'Hoàn thành tốt nhiệm vụ học tập', 'Cần tiếp tục phát huy' mà không có nội dung cụ thể. Mọi nhóm khác dù có điểm vẫn trả noiDung rỗng. Trường ma để trống. Nhóm Không chọn trả noiDung rỗng. Không dùng ở BẤT KỲ vị trí nào các từ xưng hô Em, Con, Bạn, Cháu, Học sinh, Các em; không được mở đầu bằng Nắm; viết trực tiếp vào kỹ năng, giữ tên bài đúng KHDH khi phù hợp. Không viết tên học sinh. ${attempt>1?`LẦN SỬA ${attempt}: Các lời nhận xét trước vi phạm: ${issues.slice(-8).join(' | ')}. Hãy viết lại hoàn toàn, tránh các lỗi này.`:''}`;
+                const prompt=`KHỐI: ${r.settings.grade}\nMÔN: ${subject.name}\nTHÁNG: ${r.settings.month}\nNĂM HỌC: ${regularEvalSchoolYear()}\nCÁC NHÓM CẦN VIẾT: ${wanted.map(group=>group.label).join('; ')}\nĐIỂM MÔN HỌC: ${gradeFor('monHoc')}\nĐIỂM NĂNG LỰC CHUNG: ${gradeFor('nangLucChung')}\nĐIỂM NĂNG LỰC ĐẶC THÙ: ${gradeFor('nangLucDacThu')}\nĐIỂM PHẨM CHẤT: ${gradeFor('phamChat')}\nBIẾN THỂ NGÔN NGỮ: ${variation}\n\nĐIỂM THÁNG TRƯỚC (nếu có): ${REGULAR_EVAL_GROUPS.map(g=>`${g.label}: ${regularEvalScoreLabel(previousLevels[g.key])}`).join('; ')}\nNHẬN XÉT THÁNG TRƯỚC: ${previousText||'Không có.'}\n\nKHDH THÁNG HIỆN TẠI (căn cứ ưu tiên):\n${khdh.trim()||'Chưa được cung cấp. Chỉ viết thận trọng dựa vào bối cảnh môn/khối, không bịa bài học cụ thể.'}\n\nViết ngắn gọn TỐI ĐA 250 ký tự theo cấu trúc HAI VẾ: trước ghi nhận một hành động/kỹ năng thực hiện được và CHI TIẾT KIẾN THỨC CỤ THỂ của KHDH THÁNG NÀY; sau dấu chấm phẩy là một góp ý cụ thể, nhẹ nhàng, hướng rèn luyện tiếp theo. Điểm 2–8 có thể viết “; tuy nhiên, cần ...”; điểm 9–10 viết “; tiếp tục duy trì/phát huy ...”, không bịa ra hạn chế. Ví dụ CÁCH DIỄN ĐẠT nếu đúng KHDH: “Rút ra được bài học về thái độ trân trọng người lao động; tuy nhiên, cần mạnh dạn hơn khi bày tỏ suy nghĩ về vai trò của người lao động.” Không áp dụng máy móc ví dụ cho môn khác. Không viết chung chung kiểu 'Có kết quả học tập tốt', 'Hoàn thành tốt nhiệm vụ học tập', 'Cần tiếp tục phát huy' mà không có nội dung cụ thể. Mọi nhóm khác dù có điểm vẫn trả noiDung rỗng. Trường ma để trống. Nhóm Không chọn trả noiDung rỗng. Không dùng ở BẤT KỲ vị trí nào các từ xưng hô Em, Con, Bạn, Cháu, Học sinh, Các em; không được mở đầu bằng Nắm; viết trực tiếp vào kỹ năng, giữ tên bài đúng KHDH khi phù hợp. Không viết tên học sinh. ${attempt>1?`LẦN SỬA ${attempt}: Các lời nhận xét trước vi phạm: ${issues.slice(-8).join(' | ')}. Hãy viết lại hoàn toàn, tránh các lỗi này.`:''}`;
                 const raw=await callGameGeminiApi({action:'regular-evaluation-comment',prompt});
                 if(regularEvalContextKey()!==contextAtStart)throw new Error('Lớp, môn hoặc tháng đã thay đổi; không sử dụng nhận xét của ngữ cảnh cũ.');
                 if(raw?.model)localStorage.setItem(GAME_GEMINI_MODEL_STORAGE,raw.model);
                 const result=normalizeRegularEvaluationAiResult(raw?.result||{});
                 for(const group of wanted){
                     const comment=sanitizeGeneratedComment(result[group.key]?.noiDung);
-                    const validation=validateGeneratedComment(comment,student);
+                    const validation=validateGeneratedComment(comment,student,{requireConstructiveStyle:true,score:levels[group.key]});
                     if(validation.valid&&!regularEvalDuplicateAiComment(student.id,group,comment))accepted[group.key]={noiDung:comment};
                     else issues.push(`${group.label}: ${[...validation.errors,...(regularEvalDuplicateAiComment(student.id,group,comment)?['Trùng lời nhận xét của học sinh khác']:[])].join(', ')}`);
                 }
@@ -2630,7 +2650,7 @@ Nếu nhóm Không chọn thì noiDung rỗng, không tự đoán điểm. Trư�
                 if(!ev||ev.isLocked)return;
                 REGULAR_EVAL_GROUPS.forEach(group=>{
                     const old=String(ev[group.textField]||'').trim();
-                    if(old&&!validateGeneratedComment(old,student).valid)tasks.push({student,ev,group,old});
+                    if(old&&(!validateGeneratedComment(old,student).valid||!regularEvalConstructiveStyleCheck(old,regularEvalResolveLevels(ev)[group.key]).valid))tasks.push({student,ev,group,old});
                 });
             });
             if(!tasks.length)return showToast('Không có nhận xét chưa khóa nào cần chuẩn hóa trong môn/tháng này.','success');
@@ -2646,14 +2666,14 @@ Nếu nhóm Không chọn thì noiDung rỗng, không tự đoán điểm. Trư�
                     for(let attempt=1;attempt<=REGULAR_EVAL_MAX_RETRIES&&!written;attempt++){
                         regularEvalSetLoading(`Chuẩn hóa nhận xét ${i+1}/${tasks.length} · ${student.name}`);
                         const value=regularEvalResolveLevels(ev)[group.key];
-                        const prompt=`NHIỆM VỤ: VIẾT LẠI MỘT NHẬN XÉT CŨ, KHÔNG TẠO ĐÁNH GIÁ MỚI.\nKHỐI: ${r.settings.grade}\nMÔN: ${subject.name}\nTHÁNG: ${r.settings.month}\nNHÓM: ${group.label}\nĐIỂM THANG 10 (nếu có): ${value===null?'Không có điểm, tuyệt đối không suy đoán':regularEvalScoreLabel(value)}\nNHẬN XÉT CŨ CẦN GIỮ NGUYÊN Ý NGHĨA: ${old}\nKHDH THÁNG NÀY (chỉ để kiểm tra sự phù hợp):\n${khdh||'Chưa có KHDH'}\n\nChỉ viết lại câu cũ cho khách quan, bắt đầu bằng kỹ năng/hành động. Tuyệt đối không có ở BẤT KỲ vị trí nào các từ xưng hô: Em, Con, Bạn, Cháu, Học sinh, Các em; không tên học sinh, không nhãn tên môn/lớp, không nhắc điểm hoặc KHDH. DƯỚI 250 ký tự. KHÔNG thêm thành tích, bài học hoặc lỗi chưa có trong lời cũ; nếu thiếu căn cứ, chỉ diễn đạt lại câu gốc. Chỉ điền noiDung vào nhóm ${group.key}; các nhóm khác trả noiDung rỗng, mọi ma rỗng.${issues.length?`\nPHẢI SỬA LỖI TRƯỚC: ${issues.join('; ')}`:''}`;
+                        const prompt=`NHIỆM VỤ: VIẾT LẠI MỘT NHẬN XÉT CŨ, KHÔNG TẠO ĐÁNH GIÁ MỚI.\nKHỐI: ${r.settings.grade}\nMÔN: ${subject.name}\nTHÁNG: ${r.settings.month}\nNHÓM: ${group.label}\nĐIỂM THANG 10 (nếu có): ${value===null?'Không có điểm, tuyệt đối không suy đoán':regularEvalScoreLabel(value)}\nNHẬN XÉT CŨ CẦN GIỮ NGUYÊN Ý NGHĨA: ${old}\nKHDH THÁNG NÀY (chỉ để kiểm tra sự phù hợp):\n${khdh||'Chưa có KHDH'}\n\nChỉ viết lại câu cũ cho khách quan theo hai vế: kỹ năng đã thực hiện được; sau đó định hướng rèn thêm (hoặc tiếp tục duy trì nếu điểm cao). Ví dụ lối viết nếu phù hợp nội dung cũ: “Rút ra được bài học về thái độ trân trọng người lao động; tuy nhiên, cần mạnh dạn hơn khi bày tỏ suy nghĩ về vai trò của người lao động.” KHÔNG thêm thiếu sót mà lời cũ không thể hiện; nếu không có căn cứ cải thiện cụ thể, chỉ hướng duy trì kỹ năng đã nêu. Bắt đầu bằng kỹ năng/hành động. Tuyệt đối không có ở BẤT KỲ vị trí nào các từ xưng hô: Em, Con, Bạn, Cháu, Học sinh, Các em; không tên học sinh, không nhãn tên môn/lớp, không nhắc điểm hoặc KHDH. DƯỚI 250 ký tự. KHÔNG thêm thành tích, bài học hoặc lỗi chưa có trong lời cũ; nếu thiếu căn cứ, chỉ diễn đạt lại câu gốc. Chỉ điền noiDung vào nhóm ${group.key}; các nhóm khác trả noiDung rỗng, mọi ma rỗng.${issues.length?`\nPHẢI SỬA LỖI TRƯỚC: ${issues.join('; ')}`:''}`;
                         try{
                             const raw=await callGameGeminiApi({action:'regular-evaluation-comment',prompt});
                             if(regularEvalContextKey()!==normalizeContext)break;
                             if(raw?.model)localStorage.setItem(GAME_GEMINI_MODEL_STORAGE,raw.model);
                             const result=normalizeRegularEvaluationAiResult(raw?.result||{});
                             const candidate=sanitizeGeneratedComment(result[group.key]?.noiDung);
-                            const checked=validateGeneratedComment(candidate,student);
+                            const checked=validateGeneratedComment(candidate,student,{requireConstructiveStyle:true,score:value});
                             if(checked.valid)written=candidate;else issues.push(...checked.errors);
                         }catch(error){issues.push(String(error?.message||error));}
                         if(!written&&attempt<REGULAR_EVAL_MAX_RETRIES)await new Promise(resolve=>setTimeout(resolve,REGULAR_EVAL_RETRY_DELAY_MS));
