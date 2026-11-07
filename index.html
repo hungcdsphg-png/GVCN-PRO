@@ -2439,14 +2439,20 @@ Nếu nhóm Không chọn thì noiDung rỗng, không tự đoán điểm. Trư�
         // Không coi dữ liệu nhận xét cũ là thiếu chỉ vì khác phong cách viết mới.
         function regularEvalConstructiveStyleCheck(comment,score){
             const text=String(comment||'').trim();
+            // Vế 1: kết quả đã làm được; vế 2: hướng duy trì / củng cố.
+            // Chấp nhận hai mệnh đề ngăn bằng dấu ";" hoặc dấu chấm + câu mới.
             const parts=text.split(/\s*;\s*|[.!?]\s+(?=[\p{Lu}])/u).map(v=>v.trim()).filter(Boolean);
-            if(parts.length!==2)return {valid:false,reason:'Cần hai vế: kỹ năng đã làm được; góp ý rèn luyện hoặc duy trì kỹ năng đó'};
-            const second=regularEvalNormalizeCommentText(parts[1]);
+            if(parts.length!==2)return {valid:false,reason:'Cần hai vế: kỹ năng đã thực hiện được; hướng tiếp tục củng cố hoặc duy trì'};
             const first=regularEvalNormalizeCommentText(parts[0]);
-            const suggested=/^(?:tuy nhien[, ]+|can\s+|tiep tuc\s+|nen\s+|dong thoi[, ]+|ben canh do[, ]+|duy tri\s+|phat huy\s+)/i;
-            if(!suggested.test(second))return {valid:false,reason:'Vế sau phải nêu rõ việc cần rèn hoặc duy trì, ví dụ “tuy nhiên, cần…”'};
-            if(!first||first.split(/\s+/).length<5||second.split(/\s+/).length<4)return {valid:false,reason:'Hai vế cần diễn đạt đủ một kỹ năng và hướng rèn luyện cụ thể'};
-            if(typeof score==='number'&&score>=9&&/^(?:tuy nhien|can (?:co gang|manh dan|ren|luyen|khac phuc))/i.test(second))return {valid:false,reason:'Với điểm 9–10, ưu tiên hướng duy trì/phát huy; không suy đoán hạn chế'};
+            const second=regularEvalNormalizeCommentText(parts[1]).replace(/[.!?]+$/g,'').trim();
+            if(first.split(/\s+/).length<5||second.split(/\s+/).length<4)return {valid:false,reason:'Cần nêu rõ kỹ năng đã đạt và hướng tiếp tục rèn hoặc duy trì'};
+            // Kiểm tra một hành động/biểu hiện đã làm được, không nhận câu chỉ nêu khó khăn.
+            const achieved=/^(?:buoc dau\s+)?(?:doc|viet|thuc hien|nhan biet|nhan dien|nhan ra|phan biet|van dung|tinh|giai|trinh bay|xac dinh|su dung|hoan thanh|rut ra|hieu duoc|hieu ro|biet|the hien|thuc hanh|hop tac|phoi hop|chu dong|tham gia|ke|neu|mo ta|quan sat|sap xep|ve|dat|dem|so sanh|chi ra|lang nghe|ton trong|giu gin|chap hanh|lam duoc|ghi nho|theo doi|cam nhan)(?:\s|$)/i;
+            if(!achieved.test(first))return {valid:false,reason:'Vế đầu phải khẳng định kỹ năng hoặc hành động đã thực hiện được'};
+            const direction=/^(?:tuy nhien[, ]+|can\s+|tiep tuc\s+|nen\s+|dong thoi[, ]+|ben canh do[, ]+|duy tri\s+|phat huy\s+)/i;
+            if(!direction.test(second))return {valid:false,reason:'Vế sau cần định hướng rèn luyện hoặc duy trì, ví dụ “cần tiếp tục…”'};
+            if(/^(?:tuy nhien[, ]+)?(?:can\s+)?(?:tiep tuc\s+)?(?:co gang|phat huy|ren luyen|duy tri)(?:\s+(?:hon|them|nua|tot))*$/i.test(second))return {valid:false,reason:'Vế sau còn chung chung, chưa nói rõ cần duy trì hay rèn kỹ năng gì'};
+            if(typeof score==='number'&&score>=9&&/^(?:tuy nhien|can (?:co gang|manh dan|ren|luyen|khac phuc))/i.test(second))return {valid:false,reason:'Điểm 9–10 nên khuyến khích duy trì/phát huy, không suy đoán hạn chế'};
             return {valid:true,reason:''};
         }
         function validateGeneratedComment(comment,student=null,options=null){
@@ -2547,12 +2553,20 @@ Nếu nhóm Không chọn thì noiDung rỗng, không tự đoán điểm. Trư�
             if(!a||!b)return false;
             if(a===b)return true;
             const ax=a.split(' '),bx=b.split(' ');
-            if(ax.length<12||bx.length<12)return false;
+            if(ax.length<10||bx.length<10)return false;
             const lenRatio=Math.min(ax.length,bx.length)/Math.max(ax.length,bx.length);
-            if(lenRatio<0.85)return false;
+            if(lenRatio<0.80)return false;
+            // Bắt câu chỉ đổi vài từ, đảo nhẹ trật tự hoặc dấu câu, nhưng tránh
+            // coi mọi nhận xét chung KHDH là trùng khi kỹ năng trọng tâm khác nhau.
             const aa=new Set(ax),bb=new Set(bx);
-            let intersection=0;for(const token of aa)if(bb.has(token))intersection++;
-            return intersection/(aa.size+bb.size-intersection)>=0.9;
+            let common=0;for(const token of aa)if(bb.has(token))common++;
+            const overlap=common/(aa.size+bb.size-common);
+            if(overlap>=0.82&&lenRatio>=0.9)return true;
+            if(overlap<0.72||lenRatio<0.86)return false;
+            const bigrams=words=>{const pairs=new Set();for(let i=0;i+1<words.length;i++)pairs.add(words[i]+' '+words[i+1]);return pairs;};
+            const ab=bigrams(ax),bbg=bigrams(bx);let bigramCommon=0;
+            for(const phrase of ab)if(bbg.has(phrase))bigramCommon++;
+            return overlap>=0.75 && 2*bigramCommon/(ab.size+bbg.size)>=0.70;
         }
         function regularEvalDuplicateAiComment(studentId,group,comment,staged=null){
             if(!String(comment||'').trim())return false;
@@ -2573,6 +2587,7 @@ Nếu nhóm Không chọn thì noiDung rỗng, không tự đoán điểm. Trư�
             });
         }
         async function regularEvalGenerateComment(student, levels,requestedGroupKeys=null){
+            if(!regularEvalKhdhContextAvailable())throw new Error(regularEvalMissingKhdhMessage());
             const r=regularEvalState(),contextAtStart=regularEvalContextKey(),subject=regularEvalSubject(),khdh=regularEvalKhdhContext(),previousMonth=regularEvalPreviousMonth(r.settings.month);
             const previous=previousMonth===null?null:regularEvalGetEvaluation(student.id,previousMonth,r.settings.subjectId,regularEvalSchoolYear());
             const previousText=regularEvalEvaluationText(previous),previousLevels=regularEvalResolveLevels(previous);
@@ -2603,6 +2618,7 @@ Nếu nhóm Không chọn thì noiDung rỗng, không tự đoán điểm. Trư�
             return accepted;
         }
         window.regularEvalGenerateStudent = async function(studentId){
+            if(!regularEvalKhdhContextAvailable())return showToast(regularEvalMissingKhdhMessage(),'error');
             if(!getGameGeminiApiKey())return showToast('Chưa cấu hình Gemini API.','error');
             const student=regularEvalStudents().find(s=>String(s.id)===String(studentId));if(!student)return;
             const r=regularEvalState(),ev=regularEvalEnsureEvaluation(student.id,r.settings.month,r.settings.subjectId);
@@ -2622,6 +2638,7 @@ Nếu nhóm Không chọn thì noiDung rỗng, không tự đoán điểm. Trư�
         };
         window.regularEvalGenerateBulk = async function(onlyMissing=false){
             if(window.regularEvaluationRuntime.bulkRunning)return;
+            if(!regularEvalKhdhContextAvailable())return showToast(regularEvalMissingKhdhMessage(),'error');
             if(!getGameGeminiApiKey())return showToast('Chưa cấu hình Gemini API.','error');
             const students=regularEvalStudents();if(!students.length)return showToast('Danh sách học sinh đang trống.','error');
             const firstScan=regularEvalScanCompletion(students);
@@ -2671,6 +2688,7 @@ Nếu nhóm Không chọn thì noiDung rỗng, không tự đoán điểm. Trư�
         window.regularEvalGenerateMissing=function(){return window.regularEvalGenerateBulk(true);};
         // Viết lại các câu cũ vi phạm quy tắc, không cắt/thay chữ máy móc và không sửa ô khóa.
         window.regularEvalNormalizeExistingComments=async function(){
+            if(!regularEvalKhdhContextAvailable())return showToast(regularEvalMissingKhdhMessage(),'error');
             const rt=window.regularEvaluationRuntime;
             if(rt.bulkRunning)return showToast('AI đang chạy, vui lòng hoàn tất lượt hiện tại.','error');
             if(!getGameGeminiApiKey())return showToast('Chưa cấu hình Gemini API.','error');
@@ -2756,6 +2774,21 @@ Nếu nhóm Không chọn thì noiDung rỗng, không tự đoán điểm. Trư�
             // Never mix old manual month text with a newly indexed structured KHDH.
             if(view)return KHDHStructured.aiContext(view);
             return String(regularEvalState().khdhMap[regularEvalKhdhKey()]||'');
+        }
+        // Chặn tạo mới khi chưa xác định được bài của đúng môn và tháng.
+        // Không bịa nội dung học tập chỉ từ điểm đánh giá hay tên môn.
+        function regularEvalKhdhContextAvailable(){
+            const r=regularEvalState(),doc=r.khdhDocuments?.[regularEvalKhdhDocumentKey()];
+            if(doc){
+                const view=regularEvalKhdhView();
+                return !!view?.topics?.some(topic=>Array.isArray(topic.lessons)&&topic.lessons.length>0);
+            }
+            // Hỗ trợ văn bản KHDH theo tháng từ phiên bản cũ.
+            return !!String(r.khdhMap?.[regularEvalKhdhKey()]||'').trim();
+        }
+        function regularEvalMissingKhdhMessage(){
+            const r=regularEvalState();
+            return `Chưa xác định được bài học KHDH của ${regularEvalSubject().name}, khối ${r.settings.grade}, tháng ${r.settings.month}. Vui lòng Nhập KHDH hoặc kiểm tra Ngày bắt đầu Tuần 1 trước khi tạo AI.`;
         }
         function regularEvalKhdhTreeHtml(){
             const r=regularEvalState(),key=regularEvalKhdhDocumentKey(),doc=r.khdhDocuments?.[key],view=regularEvalKhdhView();
