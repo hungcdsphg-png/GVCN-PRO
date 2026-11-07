@@ -236,7 +236,8 @@ async function generateRegularEvaluation(apiKey, prompt) {
 - Bốn nhóm có BỐN ĐIỂM RIÊNG theo thang x/10, tuyệt đối không dùng điểm chung. 10 nổi bật hơn 9, 8 hơn 7, 6 hơn 5, 4 hơn 2. 9–10 thành thạo, chủ động; 7–8 tốt; 5–6 đạt cơ bản, cần rèn thêm; 2–4 bước đầu, khích lệ và hướng dẫn.
 - Ưu tiên TUYỆT ĐỐI chủ điểm, bài học, kiến thức và kỹ năng TRONG KHDH môn/tháng đang xét. Không bịa kiến thức, bài học hoặc thành tích ngoài KHDH. Nếu không có KHDH, diễn đạt thận trọng, tránh khẳng định kiến thức cụ thể. Với năng lực/phẩm chất chỉ mô tả biểu hiện phù hợp với hoạt động học tập, không sao chép nội dung của môn học.
 - Dùng nhận xét/điểm tháng trước nếu có để thể hiện tiến bộ hoặc tiếp tục rèn, không bịa tiến bộ.
-- Không mở đầu bằng: Em, Bạn, tên học sinh, Nắm, Nắm được, Nắm vững. Bắt đầu trực tiếp bằng kỹ năng/hành động. Không viết họ tên hoặc tên riêng của học sinh.
+- TUYỆT ĐỐI không có hô ngữ hoặc đại từ xưng hô tại BẤT KỲ vị trí nào trong lời nhận xét: Em, Con, Bạn, Cháu, Học sinh, Các em, Các bạn, Các cháu. Các từ này không được dùng như cách gọi học sinh. Viết trực tiếp bằng kỹ năng, hành động hoặc biểu hiện cụ thể. Không đưa họ tên hoặc tên riêng của học sinh vào câu.
+- Không mở đầu bằng Nắm, Nắm được, Nắm vững. Các cụm như “con đường”, “con số” nếu là danh từ chỉ nội dung bài học không phải là đại từ xưng hô.
 - Không dùng nhãn môn học, môn Tiếng Việt, [tên môn] lớp/khối X, điểm x/10, mức điểm, KHDH, kế hoạch dạy học, theo dữ liệu được cung cấp trong câu trả lời. Không lộ mã kỹ thuật, tên tệp.
 - Không dùng từ yếu, kém, không biết, không có khả năng. Mỗi nội dung phải DƯỚI 250 ký tự, tự nhiên, cụ thể và đa dạng giữa học sinh.
 - Nhóm Không chọn trả noiDung rỗng; không tự suy diễn điểm. Chỉ JSON theo schema; trường ma để chuỗi rỗng (điểm do app lưu riêng).`;
