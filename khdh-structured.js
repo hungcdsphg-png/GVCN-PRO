@@ -59,6 +59,8 @@ function normalizeRecord(raw,ctx={}){
  const weekStart=firstWeek[0]||w[0],weekEnd=lastWeek[1]||firstWeek[1]||w[1]||weekStart;
  const weekEndExplicit=!!(lastWeek[1]||firstWeek[1]&&firstWeek[1]!==firstWeek[0]||w[1]&&w[1]!==w[0]||raw.weekEndExplicit);
  const sessions=Array.isArray(raw.sessions)?raw.sessions.map(s=>({date:date(s.date??s.ngay,ctx.schoolYear),periods:number(s.periods??s.soTiet),week:week(s.week??s.tuan)})).filter(s=>s.date||s.week):[];
+ const monthsInput=raw.explicitMonths??raw.months??(raw.month==null?[]:[raw.month]);
+ const explicitMonths=Array.isArray(monthsInput)?[...new Set(monthsInput.map(Number).filter(n=>Number.isInteger(n)&&n>=1&&n<=12))]:[];
  const firstDate=date(raw.startDate??raw.ngayBatDau??raw.date??raw.ngay,ctx.schoolYear);
  const lastDate=date(raw.endDate??raw.ngayKetThuc,ctx.schoolYear)||firstDate;
  let p=number(raw.periods??raw.soTiet??raw.thoiLuong),ps=number(raw.periodStart??raw.tietBatDau),pe=number(raw.periodEnd??raw.tietKetThuc);
@@ -76,7 +78,7 @@ function normalizeRecord(raw,ctx={}){
   lessonNumber:rawLessonNumber,lessonName,periods:p,periodStart:ps,periodEnd:pe,
   weekStart,weekEnd,weekSource:raw.weekSource||(weekStart?'file':null),weekEndExplicit,weeklyPeriods:weekly,
   startDate:firstDate,endDate:lastDate,sessions,focus:trim(raw.focus??raw.trongTam??raw.knowledge??''),
-  source:trim(raw.source??ctx.source??''), scheduleWarning:trim(raw.scheduleWarning??'')
+  source:trim(raw.source??ctx.source??''), explicitMonths, scheduleWarning:trim(raw.scheduleWarning??'')
  };
 }
 function weekdayISO(isoDate,delta=0){const d=new Date(isoDate+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+delta);return d.toISOString().slice(0,10);}
@@ -156,6 +158,10 @@ function recordMonths(record,anchorDate){
   const cur=new Date(start+'T00:00:00Z'),stop=new Date(end+'T00:00:00Z'),mons=new Set();let n=0;
   while(cur<=stop&&n++<367){mons.add(cur.getUTCMonth()+1);cur.setUTCDate(cur.getUTCDate()+1);}
   for(const m of mons)add(m,mons.size===1?record.periods:null,mons.size===1?'date':'date-range-ambiguous',mons.size>1);
+  return [...hits.values()];
+ }
+ if(Array.isArray(record.explicitMonths)&&record.explicitMonths.length){
+  for(const m of record.explicitMonths)add(m,record.explicitMonths.length===1?record.periods:null,'source-month',record.explicitMonths.length>1);
   return [...hits.values()];
  }
  if(!record.weekStart||!anchorDate)return [];
