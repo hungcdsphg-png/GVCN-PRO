@@ -2505,9 +2505,15 @@ NGUYÊN TẮC BẮT BUỘC:
         window.regularEvalSetWeekOneDate=function(value){
             const r=regularEvalState(),d=value?KHDHStructured.date(value):null;
             if(value&&!d)return showToast('Ngày bắt đầu tuần 1 không hợp lệ.','error');
+            if(d&&new Date(`${d}T00:00:00Z`).getUTCDay()!==1)return showToast('Vui lòng chọn ngày thứ Hai để bắt đầu tuần học 1.','error');
             if(!r.khdhWeekOneDate)r.khdhWeekOneDate={};
             if(d)r.khdhWeekOneDate[regularEvalSchoolYear()]=d;
             else delete r.khdhWeekOneDate[regularEvalSchoolYear()];
+            // Recalculate cached month indexes when the academic calendar changes; comments and scores are untouched.
+            for(const [key,doc] of Object.entries(r.khdhDocuments||{})){
+                if(!key.startsWith(`${regularEvalSchoolYear()}|`)||!Array.isArray(doc.records))continue;
+                doc.records=KHDHStructured.enrichRecords(doc.records,{weekOneDate:regularEvalKhdhWeekOne()});
+            }
             saveData();renderLayout();
         };
         function regularEvalKhdhView(){
@@ -2526,36 +2532,41 @@ NGUYÊN TẮC BẮT BUỘC:
             const partialWarning=doc.partial?'<div class="regular-eval-khdh-warning">Một số phần của file chưa phân tích thành công. Danh sách bên dưới có thể thiếu bài; hãy kiểm tra hoặc nhập lại file có thể chọn văn bản.</div>':'';
             const topics=view.topics.map(topic=>{
                 const details=topic.lessons.map(lesson=>{
-                    const w=lesson.weekStart?`Tuần ${lesson.weekStart}${lesson.weekEnd&&lesson.weekEnd!==lesson.weekStart?'–'+lesson.weekEnd:''}`:'Chưa rõ tuần';
-                    const period=lesson.periodsInMonth===null?'Chưa rõ số tiết trong tháng':`${lesson.periodsInMonth} tiết`;
-                    const confidence=lesson.confidence?.includes('week-majority')?' · Quy đổi theo lịch tuần học':lesson.confidence?.includes('ambiguous')?' · Ngày giao tháng (chưa rõ tiết)': '';
-                    return `<div class="regular-eval-khdh-lesson"><span class="regular-eval-khdh-lessonname">${mfgEsc(lesson.lessonNumber?`Bài ${lesson.lessonNumber}: ${lesson.lessonName}`:lesson.lessonName)}${lesson.focus?`<span class="regular-eval-khdh-focus">${mfgEsc(lesson.focus)}</span>`:''}</span><span class="regular-eval-khdh-meta">${mfgEsc(period)} · ${mfgEsc(w)}${confidence}</span></div>`;
+                    const w=lesson.weekStart?`Tuần ${lesson.weekStart}${lesson.weekEnd&&lesson.weekEnd!==lesson.weekStart?'–'+lesson.weekEnd:''}`:'Chưa xác định tuần';
+                    const period=lesson.periodsInMonth===null?'Chưa xác định số tiết trong tháng':`${lesson.periodsInMonth} tiết`;
+                    const ordinal=lesson.periodStart?` · Tiết ${lesson.periodStart}${lesson.periodEnd&&lesson.periodEnd!==lesson.periodStart?'–'+lesson.periodEnd:''}`:'';
+                    const confidence=lesson.crossMonth?' · Tuần giao tháng, chưa rõ ngày dạy':lesson.weekSource==='cumulative'?' · Tuần suy từ tiết tích lũy':lesson.weekSource==='period'?' · Tuần suy từ thứ tự tiết':'';
+                    const warning=lesson.scheduleWarning?`<span class="regular-eval-khdh-focus">${mfgEsc(lesson.scheduleWarning)}</span>`:'';
+                    return `<div class="regular-eval-khdh-lesson"><span class="regular-eval-khdh-lessonname">${mfgEsc(lesson.lessonNumber?`Bài ${lesson.lessonNumber}: ${lesson.lessonName}`:lesson.lessonName)}${lesson.focus?`<span class="regular-eval-khdh-focus">${mfgEsc(lesson.focus)}</span>`:''}${warning}</span><span class="regular-eval-khdh-meta">${mfgEsc(period)} · ${mfgEsc(w)}${ordinal}${confidence}</span></div>`;
                 }).join('');
                 return `<details class="regular-eval-khdh-topic" open><summary><span>${mfgEsc(topic.name)}</span><span class="regular-eval-khdh-total">${topic.periods===null?'Chưa đủ dữ liệu số tiết':topic.periods+' tiết'} <i class="ph-bold ph-caret-down"></i></span></summary><div class="regular-eval-khdh-lessons">${details}</div></details>`;
             }).join('');
             const warning=view.unresolved.length?`<div class="regular-eval-khdh-warning"><i class="ph-bold ph-warning"></i> ${view.unresolved.length} bài chưa xác định được tháng vì thiếu thông tin ngày/tuần hoặc lịch tuần 1. Không tự gán các bài này vào tháng đang chọn.</div>`:'';
-            const calendarWarning=!regularEvalKhdhWeekOne()&&view.anchor.source==='missing'&&view.unresolved.length?'<div class="regular-eval-khdh-note">Để phân tháng cho bài chỉ có số tuần, hãy nhập “Ngày thứ Hai của tuần học 1” bên dưới.</div>':'';
+            const calendarWarning=!regularEvalKhdhWeekOne()&&view.anchor.source==='missing'&&view.unresolved.length?'<div class="regular-eval-khdh-note">Cần thiết lập “Ngày bắt đầu Tuần 1 của năm học” bên dưới để quy đổi tuần ra tháng. Hệ thống không đoán tháng khi thiếu lịch.</div>':'';
             const anchorConflict=view.anchor.source==='derived-conflict'?'<div class="regular-eval-khdh-warning">File có các ngày/tuần chưa thống nhất; hãy kiểm tra lịch năm học.</div>':'';
-            return `<div class="regular-eval-khdh-status">${mfgEsc(doc.fileName||'KHDH đã nhập')} · ${doc.records.length} bài toàn năm · ${view.topics.reduce((n,t)=>n+t.lessons.length,0)} bài tháng ${r.settings.month}</div>${topics||`<div class="regular-eval-khdh-empty">Tháng ${r.settings.month} chưa xác định được bài học của ${mfgEsc(regularEvalSubject().name)} từ file đã nhập. Không lấy dữ liệu môn khác.</div>`}${warning}${calendarWarning}${anchorConflict}${partialWarning}`;
+            const splitWarning=doc.records.some(v=>v.scheduleWarning)?`<div class="regular-eval-khdh-warning">Có ${doc.records.filter(v=>v.scheduleWarning).length} bài chưa đủ căn cứ để tính lịch/tiết. Hệ thống giữ nguyên dữ liệu KHDH, không tự chia tiết phân môn hoặc bịa tuần.</div>`:'';
+            return `<div class="regular-eval-khdh-status">${mfgEsc(doc.fileName||'KHDH đã nhập')} · ${doc.records.length} bài toàn năm · ${view.topics.reduce((n,t)=>n+t.lessons.length,0)} bài tháng ${r.settings.month}</div>${topics||`<div class="regular-eval-khdh-empty">Tháng ${r.settings.month} chưa xác định được bài học của ${mfgEsc(regularEvalSubject().name)} từ file đã nhập. Không lấy dữ liệu môn khác.</div>`}${warning}${calendarWarning}${anchorConflict}${splitWarning}${partialWarning}`;
         }
         function regularEvalKhdhPanelHtml(){
             const r=regularEvalState();
-            return `<div class="regular-eval-khdh"><div class="regular-eval-khdh-head"><div><div class="regular-eval-khdh-title"><i class="ph-fill ph-book-open-text"></i>KHDH tháng ${r.settings.month} · ${mfgEsc(regularEvalSubject().name)}</div><div class="regular-eval-note">Hệ thống tự dùng toàn bộ bài của tháng làm căn cứ cho AI. Bấm vào chủ đề để mở rộng/thu gọn; không cần chọn từng bài/tiết.</div></div><div class="regular-eval-actions"><button class="regular-eval-btn gray" onclick="regularEvalClearKHDH()">Xóa KHDH</button><button class="regular-eval-btn indigo" onclick="regularEvalOpenKHDHFile()">Nhập KHDH</button></div></div><div class="regular-eval-khdh-tree">${regularEvalKhdhTreeHtml()}</div><div class="regular-eval-khdh-calendar"><label for="regular-eval-week-one">Ngày thứ Hai của tuần học 1 (chỉ dùng khi KHDH không có ngày thực hiện)</label><input id="regular-eval-week-one" type="date" value="${mfgEsc(regularEvalKhdhWeekOne())}" onchange="regularEvalSetWeekOneDate(this.value)"/><span>Nếu file có ngày dạy, hệ thống luôn ưu tiên ngày thực tế. Nếu chỉ có tuần, lịch này giúp phân tháng theo các ngày học thứ Hai–thứ Sáu.</span></div></div>`;
+            return `<div class="regular-eval-khdh"><div class="regular-eval-khdh-head"><div><div class="regular-eval-khdh-title"><i class="ph-fill ph-book-open-text"></i>KHDH tháng ${r.settings.month} · ${mfgEsc(regularEvalSubject().name)}</div><div class="regular-eval-note">Hệ thống tự dùng toàn bộ bài của tháng làm căn cứ cho AI. Bấm vào chủ đề để mở rộng/thu gọn; không cần chọn từng bài/tiết.</div></div><div class="regular-eval-actions"><button class="regular-eval-btn gray" onclick="regularEvalClearKHDH()">Xóa KHDH</button><button class="regular-eval-btn indigo" onclick="regularEvalOpenKHDHFile()">Nhập KHDH</button></div></div><div class="regular-eval-khdh-tree">${regularEvalKhdhTreeHtml()}</div><div class="regular-eval-khdh-calendar"><label for="regular-eval-week-one">Ngày bắt đầu Tuần 1 của năm học (thứ Hai, dùng khi KHDH thiếu ngày cụ thể)</label><input id="regular-eval-week-one" type="date" value="${mfgEsc(regularEvalKhdhWeekOne())}" onchange="regularEvalSetWeekOneDate(this.value)"/><span>Ngày dạy trong file được ưu tiên để xác định tháng; nếu không có, sử dụng tuần hoặc thứ tự tiết kết hợp lịch này. Với tuần giao tháng thiếu ngày cụ thể, bài được hiển thị ở cả hai tháng và đánh dấu chưa chắc chắn.</span></div></div>`;
         }
         function regularEvalKHDHPrompt(){
             const r=regularEvalState(),subject=regularEvalSubject();
-            return `Phân tích KẾ HOẠCH DẠY HỌC tiểu học Việt Nam thành dữ liệu JSON để tra cứu cả năm học ${regularEvalSchoolYear()}.
-KHÔNG lọc theo tháng hiện tại. Chỉ trích nguyên văn những bài thật sự xuất hiện trong đoạn tài liệu. Không tự bịa số tuần, ngày, số tiết, chủ điểm hoặc nội dung bài. Giữ đúng tuần/tiết của TỪNG bài; không dùng tuần của chủ đề gán cho toàn bộ bài. Nếu một bài có nhiều ngày/tuần, ghi sessions hoặc weekStart/weekEnd đầy đủ.
-Năm học ${regularEvalSchoolYear()}, khối đang xem ${r.settings.grade}, môn đang xem ${subject.name}; nếu tài liệu ghi rõ khối/môn khác, phải trả giá trị thực tế đó. Nếu không có trường khối/môn, mặc định khối ${r.settings.grade} và môn ${subject.name}. Trong Excel nhiều Sheet, môn của từng bản ghi là tên môn ghi trong SHEET đó (nếu là tên môn).
-Trả DUY NHẤT một JSON object: {"records":[{"grade":3,"subject":"Tiếng Việt","topic":"Chủ đề...","lessonNumber":"9","lessonName":"Tên bài","periods":3,"weekStart":5,"weekEnd":6,"startDate":null,"endDate":null,"sessions":[{"date":"YYYY-MM-DD","periods":1,"week":5}],"focus":"trọng tâm có trong tài liệu"}]}.
-Mỗi bài một bản ghi. Dùng null nếu không có căn cứ về ngày/tiết/tuần. Không chuyển tuần thành tháng; app tự xử lý lịch học. Không kèm Markdown, lời giới thiệu, tổng kết. Trích toàn bộ các bài trong đoạn dữ liệu dưới đây.`;
+            return `Bạn là bộ trích xuất dữ liệu KẾ HOẠCH DẠY HỌC tiểu học. Trả lại JSON để máy tính xử lý cho CẢ NĂM HỌC ${regularEvalSchoolYear()}. Không lọc theo tháng.
+Căn cứ đúng nội dung được cung cấp: KHỐI, MÔN, CHỦ ĐỀ, TÊN BÀI, SỐ TIẾT, THỨ TỰ TIẾT PPCT, TUẦN và NGÀY THỰC HIỆN. Không tự sáng tác tên bài, nội dung, số tiết, ngày, thứ tự tiết hoặc tuần. Nếu thiếu, điền null.
+Mỗi bài là MỘT bản ghi theo đúng thứ tự xuất hiện. Nếu bài kéo dài nhiều tiết: periodStart là số tiết đầu, periodEnd là số tiết cuối trong PPCT; periods là tổng tiết của bài. Nếu tài liệu chỉ có số tiết bài mà không có thứ tự tiết thì periodStart/periodEnd=null: CODE sẽ cộng dồn tiết và tính tuần bằng bảng định mức theo khối/môn. KHÔNG ĐOÁN TUẦN khi tài liệu không ghi.
+Nếu KHDH ghi tuần/tuần bắt đầu-kết thúc, trích chính xác từng bài, không sao chép tuần của chủ đề cho mọi bài. Nếu có ngày dạy từng tiết, trích sessions gồm date,periods,week. Mỗi phần trong Excel có tiêu đề === SHEET ... === có thể thuộc môn khác; giữ đúng môn và khối trong từng bản ghi.
+Năm học ${regularEvalSchoolYear()}, khối đang xem ${r.settings.grade}, môn đang xem ${subject.name}. Nếu tài liệu ghi rõ khối/môn khác, ưu tiên giá trị trong tài liệu. Nếu không có, dùng khối/môn đang xem, trừ khi tên SHEET xác định được môn khác.
+Trả DUY NHẤT JSON: {"records":[{"grade":3,"subject":"Tiếng Việt","topic":"Những trải nghiệm thú vị","lessonNumber":"1","lessonName":"Ngày gặp lại","periods":3,"periodStart":1,"periodEnd":3,"weekStart":null,"weekEnd":null,"weeklyPeriods":null,"startDate":null,"endDate":null,"sessions":[],"focus":""}]}.
+Trong KHDH của phân môn Tin học/Công nghệ hoặc Âm nhạc/Mĩ thuật, chỉ điền weeklyPeriods nếu file nói rõ số tiết/tuần của CHÍNH phân môn đó; không tự chia định mức môn ghép. Không bổ sung Markdown hoặc lời giải thích.`;
         }
         function regularEvalFileToBase64(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||'').split(',')[1]||'');reader.onerror=reject;reader.readAsDataURL(file);});}
         function regularEvalLoadScript(src,globalName){return new Promise((resolve,reject)=>{if(window[globalName])return resolve(window[globalName]);const s=document.createElement('script');s.src=src;s.onload=()=>resolve(window[globalName]);s.onerror=reject;document.body.appendChild(s);});}
         // Extract *every* sheet/page; no 60,000-character silent truncation.
         async function regularEvalExtractKHDHSource(file){
             const name=file.name.toLowerCase(),ctx={grade:regularEvalState().settings.grade,subjectId:regularEvalState().settings.subjectId,schoolYear:regularEvalSchoolYear(),subjects:REGULAR_EVAL_SUBJECTS,source:file.name};
-            const parts=[],directRecords=[],scannedPages=[];
+            const parts=[],directRecords=[],scannedPages=[],sourceSections=[];
             if(/\.(xlsx|xls|csv)$/i.test(name)){
                 const XLSX=await regularEvalEnsureXLSX(),wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});
                 for(const sheet of wb.SheetNames){const rows=XLSX.utils.sheet_to_json(wb.Sheets[sheet],{header:1,defval:'',raw:false,dateNF:'dd/mm/yyyy'});
@@ -2572,9 +2583,11 @@ Mỗi bài một bản ghi. Dùng null nếu không có căn cứ về ngày/ti�
                     const localCtx={...ctx,grade:sheetGrade,subjectId:subject?.id||(wb.SheetNames.length===1?ctx.subjectId:null)};
                     const entries=KHDHStructured.rowsToRecords(rows,localCtx);
                     directRecords.push(...entries);
-                    parts.push(`=== SHEET ${sheet} ===\n`+rows.map(row=>row.map(v=>String(v??'')).join(' | ')).join('\n'));
+                    const sectionText=`=== SHEET ${sheet} ===\n`+rows.map(row=>row.map(v=>String(v??'')).join(' | ')).join('\n');
+                    parts.push(sectionText);
+                    sourceSections.push({text:sectionText,subjectId:localCtx.subjectId,grade:localCtx.grade,sheetName:sheet});
                 }
-                return {text:parts.join('\n\n'),directRecords,scannedPages};
+                return {text:parts.join('\n\n'),directRecords,scannedPages,sourceSections};
             }
             if(name.endsWith('.docx')){
                 const mammoth=await regularEvalLoadScript('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js','mammoth');
@@ -2597,7 +2610,8 @@ Mỗi bài một bản ghi. Dùng null nếu không có căn cứ về ngày/ti�
                     const dom=new DOMParser().parseFromString(new TextDecoder('utf-8').decode(bytes),'text/html');
                     return {text:dom.body.innerText||dom.body.textContent||'',directRecords,scannedPages};
                 }
-                throw new Error('Tệp .doc nhị phân không đọc được tin cậy trên trình duyệt. Hãy mở bằng Word và lưu lại .docx để giữ đúng toàn bộ bảng/tuần học.');
+                const reader=await regularEvalLoadScript('./khdh-doc-reader.js','KHDHDocReader');
+                return {text:reader.read(bytes),directRecords,scannedPages};
             }
             if(name.endsWith('.pdf')){
                 const pdfjs=await regularEvalLoadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js','pdfjsLib');
@@ -2622,7 +2636,7 @@ Mỗi bài một bản ghi. Dùng null nếu không có căn cứ về ngày/ti�
                 }
                 return {text:parts.join('\n\n'),directRecords,scannedPages};
             }
-            throw new Error('Chỉ hỗ trợ KHDH PDF, Word .docx hoặc Excel .xls/.xlsx.');
+            throw new Error('Chỉ hỗ trợ KHDH PDF, Word .doc/.docx hoặc Excel .xls/.xlsx.');
         }
         function regularEvalKhdhChunks(text,max=12500){
             const lines=String(text||'').split('\n'),chunks=[];let current='';
@@ -2631,8 +2645,12 @@ Mỗi bài một bản ghi. Dùng null nếu không có căn cứ về ngày/ti�
         }
         function regularEvalParseKhdhJSON(raw){
             const text=String(raw||'').replace(/```(?:json)?/gi,'').trim();let obj;
-            try{obj=JSON.parse(text);}catch{const a=text.indexOf('{'),b=text.lastIndexOf('}');if(a<0||b<=a)throw new Error('AI không trả JSON hợp lệ; nội dung KHDH chưa được thay thế.');obj=JSON.parse(text.slice(a,b+1));}
-            return Array.isArray(obj)?obj:Array.isArray(obj.records)?obj.records:[];
+            try{obj=JSON.parse(text);}catch{const a=text.indexOf('{'),b=text.lastIndexOf('}');if(a<0||b<=a)throw new Error('AI không trả JSON hợp lệ; dữ liệu KHDH cũ không thay đổi.');obj=JSON.parse(text.slice(a,b+1));}
+            if(Array.isArray(obj))return obj;
+            if(Array.isArray(obj.records))return obj.records;
+            // Accept nested topics as well as flat records, without inferring missing fields.
+            if(Array.isArray(obj.topics))return obj.topics.flatMap(topic=>(topic.lessons||[]).map(lesson=>({grade:obj.grade,subject:obj.subject,topic:topic.name||topic.topic||null,...lesson})));
+            return [];
         }
         window.regularEvalOpenKHDHFile=function(){document.getElementById('regular-eval-khdh-input')?.click();};
         window.regularEvalHandleKHDHFile=async function(input){
@@ -2647,7 +2665,11 @@ Mỗi bài một bản ghi. Dùng null nếu không có căn cứ về ngày/ti�
                     const ctx={grade:regularEvalState().settings.grade,subjectId:regularEvalState().settings.subjectId,schoolYear:regularEvalSchoolYear(),subjects:REGULAR_EVAL_SUBJECTS,source:file.name};
                     records.push(...KHDHStructured.rowsToRecords(sourceText.split('\n').map(line=>line.split('|')),ctx));
                 }
-                const chunks=regularEvalKhdhChunks(sourceText),failures=[];
+                // Excel: Gemini sees one sheet at a time, so unknown sheets cannot inherit the selected subject.
+                const chunks=extracted.sourceSections?.length
+                    ? extracted.sourceSections.flatMap(section=>regularEvalKhdhChunks(section.text).map(text=>({text,subjectId:section.subjectId,grade:section.grade,sheetName:section.sheetName})))
+                    : regularEvalKhdhChunks(sourceText).map(text=>({text,subjectId:regularEvalState().settings.subjectId,grade:Number(regularEvalState().settings.grade)}));
+                const failures=[];
                 if(getGameGeminiApiKey()){
                     for(const scanned of extracted.scannedPages||[]){
                         regularEvalSetLoading(`Đang đọc trang PDF scan ${scanned.page}: ${file.name}`);
@@ -2663,30 +2685,60 @@ Mỗi bài một bản ghi. Dùng null nếu không có căn cứ về ngày/ti�
                     for(let i=0;i<chunks.length;i++){
                         regularEvalSetLoading(`Đang phân tích KHDH phần ${i+1}/${chunks.length}: ${file.name}`);
                         try{
-                            const result=await callGameGeminiApi({action:'regular-evaluation-khdh',prompt:regularEvalKHDHPrompt(),documentText:chunks[i]});
+                            const task=chunks[i];
+                            const result=await callGameGeminiApi({action:'regular-evaluation-khdh',prompt:regularEvalKHDHPrompt(),documentText:task.text});
                             const rawRecords=regularEvalParseKhdhJSON(result?.text);
-                            for(const raw of rawRecords){const r=KHDHStructured.normalizeRecord(raw,{schoolYear:regularEvalSchoolYear(),grade:regularEvalState().settings.grade,subjectId:regularEvalState().settings.subjectId,subjects:REGULAR_EVAL_SUBJECTS,source:file.name});if(r)records.push(r);}
+                            for(const raw of rawRecords){
+                                // Explicit sheet's mapped subject wins over AI guesses; unrecognized sheet must name its own subject.
+                                const fileRecord=task.sheetName&&task.subjectId?{...raw,subjectId:task.subjectId,grade:task.grade}:raw;
+                                const r=KHDHStructured.normalizeRecord(fileRecord,{schoolYear:regularEvalSchoolYear(),grade:task.grade,subjectId:task.subjectId,subjects:REGULAR_EVAL_SUBJECTS,source:`${file.name}${task.sheetName?' / '+task.sheetName:''}`});
+                                if(r)records.push(r);
+                            }
                         }catch(err){console.warn('KHDH AI chunk failed',i,err);failures.push(i+1);}
                     }
                 }
                 if(!records.length)throw new Error(getGameGeminiApiKey()?'Không nhận diện được bài học từ tài liệu; không thay thế KHDH đã lưu.':'Chưa nhận diện được bảng KHDH; cần cấu hình Gemini API để phân tích tài liệu dạng tự do.');
-                // AI entries take precedence over mechanically extracted duplicates for the same lesson and week.
-                const byLesson=new Map();for(const r of records){if(!REGULAR_EVAL_SUBJECTS.some(s=>s.id===r.subjectId))continue;if(![1,2,3,4,5].includes(Number(r.grade)))continue;
-                    const k=[r.grade,r.subjectId,KHDHStructured.fold(r.topic),KHDHStructured.fold(r.lessonName),r.weekStart||'',r.startDate||''].join('|');
-                    if(!byLesson.has(k)||(!byLesson.get(k).focus&&r.focus))byLesson.set(k,r);
+                // Reconcile Excel parser and Gemini results for the SAME lesson, keeping the most complete real metadata.
+                // Never collapse two documented occurrences at distinct period/week/date positions.
+                const byLesson=new Map();
+                for(const r of records){
+                    if(!REGULAR_EVAL_SUBJECTS.some(s=>s.id===r.subjectId)||![1,2,3,4,5].includes(Number(r.grade)))continue;
+                    const base=[r.grade,r.subjectId,KHDHStructured.fold(r.topic),KHDHStructured.fold(r.lessonName),r.lessonNumber||''].join('|');
+                    let key=base;
+                    if(byLesson.has(key)){
+                        const old=byLesson.get(key);
+                        if(old.periodStart&&r.periodStart&&old.periodStart!==r.periodStart || old.weekStart&&r.weekStart&&old.weekStart!==r.weekStart || old.startDate&&r.startDate&&old.startDate!==r.startDate)key=base+'|'+(r.periodStart||r.weekStart||r.startDate);
+                    }
+                    if(byLesson.has(key)){
+                        const old=byLesson.get(key),more={...old};
+                        for(const field of ['periods','periodStart','periodEnd','weekStart','weekEnd','startDate','endDate','weeklyPeriods','focus'])if((more[field]===null||more[field]===undefined||more[field]==='')&&r[field]!==null&&r[field]!==undefined&&r[field]!=='')more[field]=r[field];
+                        if(r.sessions?.length>more.sessions?.length)more.sessions=r.sessions;
+                        byLesson.set(key,more);
+                    }else byLesson.set(key,r);
                 }
                 records=KHDHStructured.mergeUnique([...byLesson.values()]);
                 if(!records.length)throw new Error('Chưa ghép được bản ghi KHDH vào môn/khối hợp lệ.');
-                const grouped=new Map();for(const r of records){const key=regularEvalKhdhDocumentKey(r.grade,r.subjectId);if(!grouped.has(key))grouped.set(key,[]);grouped.get(key).push(r);}
+                const grouped=new Map();for(const rec of records){const key=regularEvalKhdhDocumentKey(rec.grade,rec.subjectId);if(!grouped.has(key))grouped.set(key,[]);grouped.get(key).push(rec);}
                 const stateRef=regularEvalState(),docs=stateRef.khdhDocuments||{};
-                // Update only subjects parsed from this file; other KHDH and student data untouched.
                 for(const [key,items] of grouped){
-                    // Preserve existing lessons of *other weeks/months* when a teacher imports a supplemental file.
-                    // For the same subject/topic/lesson/week/date, the newest upload replaces only that lesson.
-                    const previous=docs[key]?.records||[],uniqueKey=entry=>[entry.grade,entry.subjectId,KHDHStructured.fold(entry.topic),KHDHStructured.fold(entry.lessonName),entry.weekStart||'',entry.startDate||''].join('|');
-                    const merged=new Map(previous.map(entry=>[uniqueKey(entry),entry]));
-                    items.forEach(entry=>merged.set(uniqueKey(entry),entry));
-                    docs[key]={schoolYear:regularEvalSchoolYear(),grade:items[0].grade,subjectId:items[0].subjectId,records:KHDHStructured.mergeUnique([...merged.values()]),fileName:file.name,importedAt:new Date().toISOString(),partial:failures.length>0||!!docs[key]?.partial};
+                    // Existing lessons from another upload/month are preserved. Only the matching lesson is replaced.
+                    const previous=docs[key]?.records||[];
+                    const identity=entry=>[entry.grade,entry.subjectId,KHDHStructured.fold(entry.topic),KHDHStructured.fold(entry.lessonName),entry.lessonNumber||''].join('|');
+                    const merged=[...previous];
+                    for(const rec of items){
+                        const matches=merged.map((old,i)=>({old,i})).filter(x=>identity(x.old)===identity(rec));
+                        const exact=matches.find(x=>rec.periodStart&&x.old.periodStart===rec.periodStart || rec.startDate&&x.old.startDate===rec.startDate);
+                        const selected=exact||(matches.length===1?matches[0]:null);
+                        if(selected){
+                            // Preserve previously known metadata when the supplemental file leaves a cell empty.
+                            const updated={...selected.old,...rec};
+                            for(const field of ['periods','periodStart','periodEnd','weekStart','weekEnd','startDate','endDate','weeklyPeriods','focus'])if(rec[field]===null||rec[field]===undefined||rec[field]==='')updated[field]=selected.old[field];
+                            if(!rec.sessions?.length)updated.sessions=selected.old.sessions||[];
+                            merged[selected.i]=updated;
+                        }else merged.push(rec);
+                    }
+                    const normalized=KHDHStructured.enrichRecords(KHDHStructured.mergeUnique(merged),{weekOneDate:regularEvalKhdhWeekOne()});
+                    docs[key]={schoolYear:regularEvalSchoolYear(),grade:items[0].grade,subjectId:items[0].subjectId,records:normalized,fileName:file.name,importedAt:new Date().toISOString(),schemaVersion:2,partial:failures.length>0||!!docs[key]?.partial};
                 }
                 stateRef.khdhDocuments=docs;
                 await saveData();renderLayout();
