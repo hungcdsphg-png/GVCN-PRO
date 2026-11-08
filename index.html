@@ -3851,7 +3851,7 @@ Trong KHDH của phân môn Tin học/Công nghệ hoặc Âm nhạc/Mĩ thuật
                         <span class="px-3 py-1.5 rounded-full bg-violet-50 text-violet-700 border border-violet-100 text-xs font-bold"><i class="ph-fill ph-floppy-disk mr-1"></i>Dùng chung Gemini API đã cấu hình</span>
                     </div>
                     <div class="bg-white border border-slate-200 rounded-[1.5rem] shadow-sm overflow-hidden" style="height:calc(100vh - 245px);min-height:720px">
-                        <iframe src="./periodic-evaluation/index.html" title="Đánh giá định kỳ môn học và hoạt động giáo dục" style="width:100%;height:100%;border:0;background:#f8fafc" loading="eager" allow="clipboard-write"></iframe>
+                        <iframe src="./periodic-evaluation/index.html?className=${encodeURIComponent(state.admin?.className || '')}" title="Đánh giá định kỳ môn học và hoạt động giáo dục" style="width:100%;height:100%;border:0;background:#f8fafc" loading="eager" allow="clipboard-write"></iframe>
                     </div>
                 </section>`;
         }
