@@ -308,6 +308,34 @@ async function analyzeRegularEvaluationKHDH(apiKey, { documentText, prompt }) {
   throw lastError || new Error('Không phân tích được KHDH.');
 }
 
+// Periodic subject evaluations use explicit Tốt/Đạt/Chưa đạt levels, unlike
+// the regular 2–10 point evaluations. Only learned KHDH context is supplied.
+const PERIODIC_SUBJECT_SYSTEM = `Bạn là trợ lý giáo viên tiểu học Việt Nam. Tạo MỘT nhận xét riêng cho từng studentId, không dùng ngân hàng mẫu.
+CHỈ dùng kiến thức, kỹ năng trong KHDH đã được lọc theo khối, môn, giai đoạn. Không tự bịa bài học hoặc kết quả cá nhân.
+Mức T= Tốt: thể hiện kỹ năng vững, chính xác; mức D=Đạt: thực hiện được yêu cầu cơ bản, cần củng cố một kỹ năng cụ thể; mức C=Chưa đạt: bước đầu thực hiện được một phần, nhẹ nhàng khuyến khích rèn luyện thêm. Không đánh đồng ba mức.
+Mỗi câu tối đa 250 ký tự, khách quan, cụ thể, gồm phần ghi nhận điều đạt được và hướng duy trì/củng cố. Không nhận xét chung chung; không trùng nhau.
+KHÔNG dùng đại từ xưng hô Em, Con, Bạn, Cháu, Học sinh hoặc tên học sinh ở bất kỳ vị trí nào. Không mở đầu bằng Nắm. Không nhắc tên môn/lớp như nhãn, KHDH, điểm số, mã kỹ thuật hoặc tên file.
+Trả JSON array đúng schema; studentId phải giữ nguyên từ đầu vào, không được thay bằng STT hay họ tên.`;
+function periodicBatchSchema(){
+ return {type:'array',items:{type:'object',properties:{studentId:{type:'string'},comment:{type:'string'}},required:['studentId','comment'],additionalProperties:false}};
+}
+async function generatePeriodicSubjectBatch(apiKey,prompt){
+ let lastError;
+ for(const model of MODEL_CANDIDATES){
+  try{
+   const data=await googleGenerate({apiKey,model,body:{
+    contents:[{parts:[{text:String(prompt||'').slice(0,48000)}]}],
+    systemInstruction:{parts:[{text:PERIODIC_SUBJECT_SYSTEM}]},
+    generationConfig:{responseMimeType:'application/json',responseJsonSchema:periodicBatchSchema(),maxOutputTokens:7000,thinkingConfig:{thinkingLevel:thinkingLevelFor(model)}}
+   }});
+   const parsed=extractJson(data);
+   if(!Array.isArray(parsed))throw Object.assign(new Error('AI không trả mảng JSON'),{contentInvalid:true});
+   return {model,result:parsed.slice(0,8).map(x=>({studentId:String(x.studentId||''),comment:String(x.comment||'').trim()}))};
+  }catch(err){lastError=err;if(!shouldTryNextModel(err))break;}
+ }
+ throw lastError||new Error('Không tạo được nhận xét định kỳ.');
+}
+
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(204).end();
@@ -321,6 +349,10 @@ export default async function handler(req, res) {
     if (action === 'validate') {
       const model = await validateApiKey(apiKey);
       return res.status(200).json({ ok: true, model });
+    }
+    if (action === 'periodic-evaluation-batch') {
+      const {model,result}=await generatePeriodicSubjectBatch(apiKey,body.prompt);
+      return res.status(200).json({ok:true,model,result});
     }
     if (action === 'regular-evaluation-batch') {
       const {model,result}=await generateRegularEvaluationBatch(apiKey,body.prompt);
