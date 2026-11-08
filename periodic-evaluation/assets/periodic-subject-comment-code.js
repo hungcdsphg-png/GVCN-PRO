@@ -22,12 +22,14 @@ export const PERIOD_CODES = Object.freeze({
 });
 
 export const PERIODIC_LEVEL_LABELS = Object.freeze({
-  T: "Tốt",
+  T: "Hoàn thành tốt",
   H: "Hoàn thành",
-  C: "Chưa đạt"
+  C: "Chưa hoàn thành"
 });
 
 export function evaluationLevelToCode(level) {
+  if (level === "Tốt") return "T";
+  if (level === "Chưa đạt") return "C";
   return Object.keys(PERIODIC_LEVEL_LABELS).find(code =>
     level === code || level === PERIODIC_LEVEL_LABELS[code]
   ) ?? "";
