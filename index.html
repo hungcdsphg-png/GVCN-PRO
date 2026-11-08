@@ -2062,10 +2062,28 @@
                 .replace(/^\s*lop\s*/i,'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
                 .replace(/[đĐ]/g,'D').replace(/[^a-zA-Z0-9]/g,'').toUpperCase();
         }
+        function regularEvalExportMonth(month){
+            if(typeof month==='number')return Number.isInteger(month)?month:NaN;
+            const raw=String(month??'').trim();
+            const match=raw.match(/^(?:th[aá]ng\s*)?(\d{1,2})$/i);
+            return match?Number(match[1]):NaN;
+        }
+        // Cho phép subjectId lịch sử và tên hiển thị khác nhau; luôn quy về ID nội bộ.
+        function regularEvalExportSubjectId(subjectId){
+            if(Object.prototype.hasOwnProperty.call(REGULAR_EVAL_SUBJECT_CODE,subjectId))return subjectId;
+            const key=regularEvalSheetKey(subjectId);
+            const aliases={'tiengviet':'tiengviet','tv':'tiengviet','tiengviet3':'tiengviet',
+                'hoatdongtrainghiem':'hdtg','hdtg':'hdtg',
+                'lichsuvadiali':'lichsuvadiali','lichsudiali':'lichsuvadiali',
+                'ngoaingu1':'ngoaingu'};
+            const matched=REGULAR_EVAL_SUBJECTS.find(sub=>regularEvalSheetKey(sub.id)===key ||
+                regularEvalSheetKey(sub.name)===key || regularEvalSheetKey(sub.sheetName)===key);
+            return matched?.id||aliases[key]||String(subjectId||'');
+        }
         function generateEvaluationExportCode({type,subjectId,month,score,className,studentOrder,studentIndex}){
             const prefixes={MON_HOC:'TX',NLC:'TXNLC',NLDT:'TXNLDT',PCCY:'TXPCCY'};
-            const prefix=prefixes[type],subject=REGULAR_EVAL_SUBJECT_CODE[subjectId];
-            const period=Number(month),index=Number(studentOrder??studentIndex),klass=normalizeClassCode(className);
+            const prefix=prefixes[type],subject=REGULAR_EVAL_SUBJECT_CODE[regularEvalExportSubjectId(subjectId)];
+            const period=regularEvalExportMonth(month),index=Number(studentOrder??studentIndex),klass=normalizeClassCode(className);
             const level=scoreToExportCode(score);
             if(!prefix||!subject||!level||!klass||!Number.isInteger(period)||period<1||period>12||
                !Number.isInteger(index)||index<1)return '';
@@ -2336,6 +2354,10 @@
                 if(ev.validationErrors){delete ev.validationErrors[field];if(!Object.keys(ev.validationErrors).length)delete ev.validationErrors;}
             }
             ev[field]=value;
+            if(REGULAR_EVAL_LEVEL_FIELDS.includes(field)){
+                const scoreField={monHoc_ma:'monHocScore',nlc_ma:'nlcScore',nldt_ma:'nldtScore',pc_ma:'pcScore'}[field];
+                if(scoreField)ev[scoreField]=value; // numeric score, never the exported code
+            }
             if(field.endsWith('_noiDung')&&ev.aiCommentScores){delete ev.aiCommentScores[field];}
             window.regularEvaluationRuntime.bulkSummary=null; saveData();
             if(REGULAR_EVAL_LEVEL_FIELDS.includes(field)||field.endsWith('_noiDung'))regularEvalSyncDeclaration();
@@ -3418,7 +3440,11 @@ Trong KHDH của phân môn Tin học/Công nghệ hoặc Âm nhạc/Mĩ thuật
                     // Từng ô không trống mới được ghi; khóa theo học sinh + năm + tháng + môn.
                     Object.entries(item.updates).forEach(([field,value])=>{
                         ev[field]=value;
-                        if(REGULAR_EVAL_LEVEL_FIELDS.includes(field))importedScoreCells++;
+                        if(REGULAR_EVAL_LEVEL_FIELDS.includes(field)){
+                            const scoreField={monHoc_ma:'monHocScore',nlc_ma:'nlcScore',nldt_ma:'nldtScore',pc_ma:'pcScore'}[field];
+                            if(scoreField)ev[scoreField]=value;
+                            importedScoreCells++;
+                        }
                         if(ev.validationErrors?.[field])delete ev.validationErrors[field];
                         if(field.endsWith('_noiDung')&&ev.aiCommentScores)delete ev.aiCommentScores[field];
                     });
@@ -3468,63 +3494,108 @@ Trong KHDH của phân môn Tin học/Công nghệ hoặc Âm nhạc/Mĩ thuật
         }
         // Bảng khai báo: nguồn sự thật là evaluations hiện tại, không lưu bản sao
         // comment/score riêng trong LocalStorage. Mã dùng chung với Xuất Excel.
-        const REGULAR_EVAL_DECLARATION_TYPES = Object.freeze([
-            {type:'MON_HOC',label:'Môn học/Hoạt động giáo dục',scoreField:'monHoc_ma',contentField:'monHoc_noiDung'},
-            {type:'NLC',label:'Năng lực chung',scoreField:'nlc_ma',contentField:'nlc_noiDung'},
-            {type:'NLDT',label:'Năng lực đặc thù',scoreField:'nldt_ma',contentField:'nldt_noiDung'},
-            {type:'PCCY',label:'Phẩm chất chủ yếu',scoreField:'pc_ma',contentField:'pc_noiDung'}
+        // Một nguồn điểm cho cả hai file: đọc điểm number hiện đang dùng tại UI,
+        // tương thích *Score (schema mới) khi không có điểm ở dropdown. TUYỆT ĐỐI
+        // không coi *_ma là mã xuất, không chuyển Tốt/Đạt/Chưa đạt thành điểm.
+        const REGULAR_EVAL_EXPORT_FIELDS=Object.freeze([
+            {type:'MON_HOC',label:'Môn học/Hoạt động giáo dục',scoreField:'monHocScore',compatField:'monHoc_ma',commentField:'monHoc_noiDung',codeField:'monHocCode',outComment:'monHocComment'},
+            {type:'NLC',label:'Năng lực chung',scoreField:'nlcScore',compatField:'nlc_ma',commentField:'nlc_noiDung',codeField:'nlcCode',outComment:'nlcComment'},
+            {type:'NLDT',label:'Năng lực đặc thù',scoreField:'nldtScore',compatField:'nldt_ma',commentField:'nldt_noiDung',codeField:'nldtCode',outComment:'nldtComment'},
+            {type:'PCCY',label:'Phẩm chất chủ yếu',scoreField:'pcScore',compatField:'pc_ma',commentField:'pc_noiDung',codeField:'pccyCode',outComment:'pccyComment'}
         ]);
         function regularEvalExportScore(ev,type){
-            // UI cập nhật *_ma; null/Không chọn PHẢI giữ trống, không lấy lại điểm cũ.
-            const fields={MON_HOC:['monHoc_ma','monHocScore'],NLC:['nlc_ma','nlcScore'],
-                NLDT:['nldt_ma','nldtScore'],PCCY:['pc_ma','pcScore']};
-            for(const field of fields[type]||[]){
-                if(!ev||!Object.prototype.hasOwnProperty.call(ev,field))continue;
-                try{return normalizeEvaluationScore(ev[field]);}
-                catch{return null;} // Điểm sai không lấy mã/giá trị cũ làm thay thế.
+            const meta=REGULAR_EVAL_EXPORT_FIELDS.find(f=>f.type===type);
+            if(!ev||!meta)return null;
+            // _ma là nơi dropdown hiện tại vẫn lưu ĐIỂM number, không phải mã xuất.
+            // Nếu có cả hai schema, điểm đang hiển thị trên dropdown được ưu tiên;
+            // trường *_Score là nguồn dự phòng để không bỏ sót hồ sơ schema mới.
+            for(const field of [meta.compatField,meta.scoreField]){
+                if(!Object.prototype.hasOwnProperty.call(ev,field))continue;
+                try{
+                    const number=normalizeEvaluationScore(ev[field]);
+                    if(number!==null)return number;
+                }catch{} // Giá trị chữ cũ không được quy đổi T/D/C thành điểm.
             }
             return null;
         }
-        // Giữ đúng 5 cột và thứ tự NHÓM trong file mẫu gốc: Sheet1.
-        // Bên trong từng nhóm và môn, học sinh luôn theo thứ tự bảng hiện tại.
-        function regularEvalBuildDeclarationRows(){
-            const r=regularEvalState(),students=regularEvalStudents(),month=Number(r.settings.month),
-                  schoolYear=regularEvalSchoolYear(),className=r.settings.className;
-            const subjects=REGULAR_EVAL_SUBJECTS.filter(subject=>students.some(student=>{
-                const ev=regularEvalGetEvaluation(student.id,month,subject.id,schoolYear);
-                return !!ev&&REGULAR_EVAL_DECLARATION_TYPES.some(group=>String(ev[group.contentField]??'').trim());
-            }));
-            const records=[],seen=new Set(),warnings=[];
-            for(const group of REGULAR_EVAL_DECLARATION_TYPES){
-                for(const subject of subjects){
-                    students.forEach((student,index)=>{
-                        const ev=regularEvalGetEvaluation(student.id,month,subject.id,schoolYear);
-                        // STT học sinh dựa vào index hiển thị, không dùng UUID hay mã Bộ GD&ĐT.
-                        const studentOrder=index+1;
-                        const studentKey=String(student.id||`missing-id-${studentOrder}`);
-                        const key=[schoolYear,r.settings.grade,normalizeClassCode(className),month,
-                            subject.id,studentKey,group.type].join('|');
-                        if(seen.has(key))return;
-                        seen.add(key);
-                        const score=regularEvalExportScore(ev,group.type),
-                              comment=String(ev?.[group.contentField]??'').trim();
+        // TẠO MỘT LẦN các bản ghi chung cho Xuất Excel và Bảng khai báo.
+        // Không lưu bản sao vào state. Giữ nguyên thứ tự regularEvalStudents() theo UI.
+        function buildEvaluationExportRows(options={}){
+            const r=regularEvalState();
+            const students=options.students||regularEvalStudents();
+            const month=regularEvalExportMonth(options.month??r.settings.month);
+            const schoolYear=String(options.schoolYear||regularEvalSchoolYear());
+            const className=String(options.className??r.settings.className??'').trim();
+            if(!Number.isInteger(month)||month<1||month>12)throw new Error('Tháng xuất đánh giá không hợp lệ.');
+            const subjectIds=options.subjectId?[regularEvalExportSubjectId(options.subjectId)]:REGULAR_EVAL_SUBJECTS.map(subject=>subject.id);
+            const knownIds=new Set(), warnings=[],rows=[],includedSubjects=[];
+            for(const subjectId of subjectIds){
+                const subject=REGULAR_EVAL_SUBJECTS.find(item=>item.id===subjectId);
+                if(!subject)throw new Error(`Không xác định được mã môn xuất: ${subjectId}`);
+                // Đối chiếu theo ID, KHÔNG theo tên, cả khi danh sách trùng họ tên.
+                const evalForStudent=student=>{
+                    const match=ev=>String(ev.studentId)===String(student.id)&&
+                        String(ev.schoolYear||schoolYear)===schoolYear&&
+                        regularEvalExportMonth(ev.month)===month&&
+                        regularEvalExportSubjectId(ev.subjectId)===subject.id;
+                    if(Array.isArray(options.evaluations))return options.evaluations.find(match)||null;
+                    // Ưu tiên bản ghi canonical; chỉ tra schema tên môn cũ khi không có.
+                    return regularEvalGetEvaluation(student.id,month,subject.id,schoolYear)||
+                        (r.evaluations||[]).find(match)||null;
+                };
+                const evals=students.map(evalForStudent);
+                if(!evals.some(ev=>ev&&REGULAR_EVAL_EXPORT_FIELDS.some(g=>String(ev[g.commentField]??'').trim())))continue;
+                includedSubjects.push(subject);
+                students.forEach((student,index)=>{
+                    const studentId=String(student.id??''),studentOrder=index+1;
+                    const uniqueKey=`${schoolYear}|${subject.id}|${month}|${studentId}`;
+                    if(!studentId)throw new Error(`Học sinh STT ${studentOrder} chưa có studentId.`);
+                    if(knownIds.has(uniqueKey))throw new Error(`Trùng studentId tại môn ${subject.name}: ${studentId}`);
+                    knownIds.add(uniqueKey);
+                    const ev=evals[index];
+                    const out={studentId,studentOrder,studentName:String(student.name||''),
+                        moetCode:student.code||'',dob:student.dob||'',schoolYear,className,
+                        grade:r.settings.grade,subjectId:subject.id,subjectName:subject.name,month};
+                    for(const group of REGULAR_EVAL_EXPORT_FIELDS){
+                        const score=regularEvalExportScore(ev,group.type);
+                        const comment=String(ev?.[group.commentField]??'').trim();
                         const code=generateEvaluationExportCode({type:group.type,subjectId:subject.id,
                             month,score,className,studentOrder});
-                        if(score!==null&&!code)warnings.push(`Không tạo được mã: ${subject.name}, HS STT ${studentOrder}, ${group.label}`);
+                        out[group.codeField]=code;out[group.outComment]=comment;
+                        out[group.type+'Score']=score;
+                        if(score!==null&&!code)warnings.push(`Không thể tạo Mã nhận xét cho: HS ${student.name||studentOrder} (STT ${studentOrder}), môn ${subject.name}, loại ${group.label}, điểm ${score}.`);
                         if(score===null||!comment)warnings.push(`Thiếu ${score===null?'điểm':'nội dung'}: ${subject.name}, HS STT ${studentOrder}, ${group.label}`);
                         if(comment.length>250)warnings.push(`Nhận xét vượt 250 ký tự: ${subject.name}, HS STT ${studentOrder}, ${group.label}`);
-                        records.push({key,studentId:String(student.id),studentOrder,
-                            studentName:student.name,moetCode:student.code||'',schoolYear,
-                            grade:r.settings.grade,className,month,subjectId:subject.id,
-                            type:group.type,label:group.label,code,comment,score});
-                    });
+                    }
+                    rows.push(out);
+                });
+            }
+            return {rows,subjects:includedSubjects,warnings,students,month,schoolYear,className,grade:r.settings.grade};
+        }
+        window.buildEvaluationExportRows=buildEvaluationExportRows;
+        // Giữ bố cục 5 cột, thứ tự các nhóm trong mẫu gốc.
+        function regularEvalBuildDeclarationRows(){
+            const dataset=buildEvaluationExportRows(),records=[],seen=new Set();
+            for(const group of REGULAR_EVAL_EXPORT_FIELDS){
+                for(const subject of dataset.subjects){
+                    for(const row of dataset.rows){
+                        if(row.subjectId!==subject.id)continue;
+                        const key=[row.schoolYear,row.grade,normalizeClassCode(row.className),row.month,
+                            row.subjectId,row.studentId,group.type].join('|');
+                        if(seen.has(key))throw new Error('Trùng dòng khai báo: '+key);
+                        seen.add(key);
+                        records.push({key,studentId:row.studentId,studentOrder:row.studentOrder,
+                            studentName:row.studentName,moetCode:row.moetCode,schoolYear:row.schoolYear,
+                            grade:row.grade,className:row.className,month:row.month,subjectId:row.subjectId,
+                            type:group.type,label:group.label,code:row[group.codeField],
+                            comment:row[group.outComment],score:row[group.type+'Score']});
+                    }
                 }
             }
-            const rows=records.map((record,index)=>[index+1,record.label,record.code,record.comment,index+1]);
-            return {records,rows,warnings,subjects:subjects.map(s=>s.id),month,schoolYear,
-                grade:r.settings.grade,className};
+            const rows=records.map((rec,index)=>[index+1,rec.label,rec.code,rec.comment,index+1]);
+            return {records,rows,warnings:dataset.warnings,subjects:dataset.subjects.map(s=>s.id),
+                month:dataset.month,schoolYear:dataset.schoolYear,grade:dataset.grade,className:dataset.className};
         }
-        // Đồng bộ chỉ số ở bộ nhớ tạm. Mọi lần xuất đều đọc lại evaluations mới nhất.
         function regularEvalSyncDeclaration(){
             const result=regularEvalBuildDeclarationRows();
             window.regularEvaluationRuntime.declarationStatus={month:result.month,className:result.className,
@@ -3538,6 +3609,8 @@ Trong KHDH của phân môn Tin học/Công nghệ hoặc Âm nhạc/Mĩ thuật
             try{
                 const view=regularEvalSyncDeclaration();
                 if(!view.rows.length)return showToast('Chưa có môn nào có nội dung nhận xét trong tháng đang chọn.','error');
+                const codeErrors=view.warnings.filter(w=>w.startsWith('Không thể tạo Mã'));
+                if(codeErrors.length)throw new Error(codeErrors.slice(0,6).join('\n'));
                 const longComments=view.records.filter(rec=>rec.comment.length>250);
                 if(longComments.length){
                     alert(`${longComments.length} nhận xét vượt 250 ký tự. Hãy sửa trước khi xuất.\n`+
@@ -3596,65 +3669,47 @@ Trong KHDH của phân môn Tin học/Công nghệ hoặc Âm nhạc/Mĩ thuật
 
         window.regularEvalExportExcel = async function(){
             try{
-                const r=regularEvalState(),students=regularEvalStudents(),month=r.settings.month;
-                const commentFields=['monHoc_noiDung','nlc_noiDung','nldt_noiDung','pc_noiDung'];
-                const selectedSubjects=REGULAR_EVAL_SUBJECTS.map(subject=>({
-                    subject,
-                    evaluations:students.map(student=>regularEvalGetEvaluation(student.id,month,subject.id))
-                })).filter(({evaluations})=>evaluations.some(ev=>
-                    ev&&commentFields.some(field=>String(ev[field]??'').trim().length>0)
-                ));
-                if(!selectedSubjects.length){
-                    showToast('Chưa có môn nào có nội dung nhận xét trong tháng đã chọn để xuất Excel.','error');
-                    return;
-                }
+                const dataset=buildEvaluationExportRows();
+                if(!dataset.subjects.length)return showToast('Chưa có môn nào có nội dung nhận xét trong tháng đã chọn để xuất Excel.','error');
+                const hardErrors=dataset.warnings.filter(w=>w.startsWith('Không thể tạo Mã')||w.startsWith('Nhận xét vượt'));
+                if(hardErrors.length)throw new Error(hardErrors.slice(0,6).join('\n'));
                 const XLSX=await regularEvalEnsureXLSX(),wb=XLSX.utils.book_new(),h=regularEvalExportHeaders();
-                let missingScores=0;
-                selectedSubjects.forEach(({subject,evaluations})=>{
-                    const code=(type,ev,index)=>{
-                        const score=regularEvalExportScore(ev,type);
-                        const result=generateEvaluationExportCode({type,subjectId:subject.id,month,score,
-                            className:r.settings.className,studentOrder:index+1});
-                        if(!result)missingScores++;
-                        return result;
-                    };
-                    const rows=[h.row1,h.row2,...students.map((student,index)=>{
-                        const ev=evaluations[index];
-                        return [index+1,student.code||'',student.name||'',student.dob||'',month,
-                            code('MON_HOC',ev,index),ev?.monHoc_noiDung||'',
-                            code('NLC',ev,index),ev?.nlc_noiDung||'',
-                            code('NLDT',ev,index),ev?.nldt_noiDung||'',
-                            code('PCCY',ev,index),ev?.pc_noiDung||''];
-                    })];
+                for(const subject of dataset.subjects){
+                    const subjectRows=dataset.rows.filter(row=>row.subjectId===subject.id);
+                    const rows=[h.row1,h.row2,...subjectRows.map(row=>[
+                        row.studentOrder,row.moetCode,row.studentName,row.dob,row.month,
+                        row.monHocCode,row.monHocComment,row.nlcCode,row.nlcComment,
+                        row.nldtCode,row.nldtComment,row.pccyCode,row.pccyComment
+                    ])];
                     const ws=XLSX.utils.aoa_to_sheet(rows);
-                    // Mã nhận xét luôn được ghi trực tiếp vào worksheet thật (F/H/J/L),
-                    // không phụ thuộc vào trường ma cũ hoặc vào ô header đã merge.
-                    for(let rowIndex=2;rowIndex<rows.length;rowIndex++){
-                        for(const colIndex of [5,7,9,11]){
-                            const value=String(rows[rowIndex][colIndex]||'');
-                            const cell=XLSX.utils.encode_cell({r:rowIndex,c:colIndex});
-                            if(value)ws[cell]={t:'s',v:value};
-                            else delete ws[cell];
-                        }
-                    }
-                    for(let rowIndex=2;rowIndex<rows.length;rowIndex++){
-                        for(const colIndex of [5,7,9,11]){
-                            const expected=String(rows[rowIndex][colIndex]||'');
-                            const got=String(ws[XLSX.utils.encode_cell({r:rowIndex,c:colIndex})]?.v||'');
-                            if(expected!==got)throw new Error(`Lỗi ghi Mã nhận xét tại dòng ${rowIndex+1}`);
-                        }
-                    }
-                    ws['!cols']=[{wch:6},{wch:24},{wch:29},{wch:16},{wch:10},{wch:24},{wch:45},{wch:28},{wch:45},{wch:28},{wch:45},{wch:28},{wch:45}];
+                    // Ghi chính xác các mã chung vào F/H/J/L, không đọc *_ma như chuỗi mã.
+                    subjectRows.forEach((row,i)=>{
+                        const codes=[row.monHocCode,row.nlcCode,row.nldtCode,row.pccyCode];
+                        codes.forEach((value,j)=>{
+                            const cellAddress=XLSX.utils.encode_cell({r:i+2,c:5+j*2});
+                            if(value)ws[cellAddress]={t:'s',v:value};
+                            else delete ws[cellAddress];
+                            const got=String(ws[cellAddress]?.v??'');
+                            if(got!==value)throw new Error(`Mã nhận xét bị lệch: ${subject.name}, STT ${row.studentOrder}, nhóm ${j+1}`);
+                            const contentAddress=XLSX.utils.encode_cell({r:i+2,c:6+j*2});
+                            if(String(ws[contentAddress]?.v??'')!==
+                              [row.monHocComment,row.nlcComment,row.nldtComment,row.pccyComment][j])
+                                throw new Error(`Nội dung bị lệch: ${subject.name}, STT ${row.studentOrder}, nhóm ${j+1}`);
+                        });
+                    });
+                    ws['!cols']=[{wch:6},{wch:24},{wch:29},{wch:16},{wch:10},
+                        {wch:24},{wch:45},{wch:28},{wch:45},{wch:28},{wch:45},{wch:28},{wch:45}];
                     ws['!merges']=[
                         ...[0,1,2,3,4].map(c=>({s:{r:0,c},e:{r:1,c}})),
                         ...[5,7,9,11].map(c=>({s:{r:0,c},e:{r:0,c:c+1}}))
                     ];
                     XLSX.utils.book_append_sheet(wb,ws,regularEvalTemplateSheetName(subject).slice(0,31));
-                });
-                const safeClass=normalizeClassCode(r.settings.className)||'Lop';
-                XLSX.writeFile(wb,`DanhGia_Thang${month}_Lop${safeClass}.xlsx`);
-                showToast(`Đã xuất ${selectedSubjects.length} môn. ${missingScores?`${missingScores} ô chưa có điểm nên để trống Mã nhận xét.`:'Mã nhận xét được tạo theo điểm 2–10.'}`,'success');
-            }catch(e){console.error(e);showToast(`Không xuất được Excel: ${e?.message||e}`,'error');}
+                }
+                const missing=dataset.warnings.filter(w=>w.startsWith('Thiếu')).length;
+                const safeClass=normalizeClassCode(dataset.className)||'Lop';
+                XLSX.writeFile(wb,`DanhGia_Thang${dataset.month}_Lop${safeClass}.xlsx`);
+                showToast(`Đã xuất ${dataset.subjects.length} môn bằng nguồn dữ liệu dùng chung.${missing?` ${missing} mục thiếu điểm/nội dung được giữ trống.`:''}`,'success');
+            }catch(error){console.error('Lỗi Xuất Excel:',error);showToast(`Không xuất được Excel: ${error?.message||error}`,'error');}
         };
 
         function regularEvalTextCell(studentId,field,value,locked){const n=String(value||'').length;return `<td class="regular-eval-text-cell"><textarea maxlength="250" class="regular-eval-textarea" ${locked?'disabled':''} oninput="regularEvalUpdateField('${escapeInlineJs(studentId)}','${field}',this.value)" aria-label="Nội dung nhận xét">${mfgEsc(value||'')}</textarea><span data-regular-counter="${mfgEsc(studentId)}-${field}" class="regular-eval-count ${regularEvalCountClass(value)}">${n}/250</span></td>`;}
