@@ -1,6 +1,6 @@
 import {
-  PERIODIC_TT27_SYSTEM, PERIODIC_TT27_COMMENT_LENGTH, periodicLessonLines,
-  formatPeriodicTt27Draft, validatePeriodicTt27Bank,
+  PERIODIC_TT27_SYSTEM, PERIODIC_TT27_COMMENT_LENGTH_RANGE, periodicLessonLines,
+  formatPeriodicTt27Draft, periodicTt27LengthAdjustment, validatePeriodicTt27Bank,
   periodicTt27Groups, periodicSamplesForStudent
 } from "./periodic-tt27-comments.js";
 import {
@@ -360,17 +360,17 @@ ${lessons.map((lesson,index)=>`${index+1}. ${lesson}`).join("\n")}`,
     const repairs = missingGroups.flatMap(group=>(Array.isArray(rows)?rows:[])
       .filter(row=>row?.mucDo===group.level && row.diem===group.score)
       .map(row=>({row,...formatPeriodicTt27Draft(row)}))
-      .filter(draft=>draft.strength && draft.nextStep && draft.length!==PERIODIC_TT27_COMMENT_LENGTH)
-      .sort((a,b)=>Math.abs(a.length-PERIODIC_TT27_COMMENT_LENGTH)-Math.abs(b.length-PERIODIC_TT27_COMMENT_LENGTH))
+      .map(draft=>({...draft,adjustment:periodicTt27LengthAdjustment(draft.length)}))
+      .filter(draft=>draft.strength && draft.nextStep && draft.adjustment!==0)
+      .sort((a,b)=>Math.abs(a.adjustment)-Math.abs(b.adjustment))
       .slice(0,2)
-      .map(({row,text,length})=>({mucDo:row.mucDo,diem:row.diem,lessonIndex:row.lessonIndex,anchor:row.anchor,text,length,
-        adjustment:PERIODIC_TT27_COMMENT_LENGTH-length})));
+      .map(({row,text,length,adjustment})=>({mucDo:row.mucDo,diem:row.diem,lessonIndex:row.lessonIndex,anchor:row.anchor,text,length,adjustment})));
     repairNotes = repairs.length
-      ? `Sửa các mẫu gần đạt sau để đúng ${PERIODIC_TT27_COMMENT_LENGTH} ký tự. adjustment dương là số ký tự cần thêm, âm là số ký tự cần bớt. Giữ đúng bài, mức và hai câu. Trả về các mẫu đã sửa và bổ sung mẫu mới cho nhóm còn thiếu.\n${JSON.stringify(repairs)}`
+      ? `Sửa các mẫu gần đạt sau để đạt ${PERIODIC_TT27_COMMENT_LENGTH_RANGE} ký tự. adjustment dương là số ký tự tối thiểu cần thêm, âm là số ký tự tối thiểu cần bớt. Giữ đúng bài, mức và hai câu. Trả về các mẫu đã sửa và bổ sung mẫu mới cho nhóm còn thiếu.\n${JSON.stringify(repairs)}`
       : "";
   }
   if (["T","H","C"].every(level=>valid.some(sample=>sample.mucDo===level))) return valid;
-  throw new Error(`Gemini chưa tạo đủ mẫu đúng ${PERIODIC_TT27_COMMENT_LENGTH} ký tự cho cả ba mức. Hãy thử tạo lại.`);
+  throw new Error(`Gemini chưa tạo đủ mẫu dài ${PERIODIC_TT27_COMMENT_LENGTH_RANGE} ký tự cho cả ba mức. Hãy thử tạo lại.`);
 };/**
  * @license lucide-react v0.562.0 - ISC
  *
@@ -883,7 +883,7 @@ const nt=async()=>{
     const samples = await l$(r,s,c,ce,h,controller.signal);
     if (controller.signal.aborted) return;
     setBank({key:scopeKey,text:h,samples});
-    W({type:"success",message:`Đã tạo ${samples.length} mẫu đúng ${PERIODIC_TT27_COMMENT_LENGTH} ký tự cho ${r} · ${c}. Hãy đối chiếu với biểu hiện thực tế của từng học sinh.`});
+    W({type:"success",message:`Đã tạo ${samples.length} mẫu dài ${PERIODIC_TT27_COMMENT_LENGTH_RANGE} ký tự cho ${r} · ${c}. Hãy đối chiếu với biểu hiện thực tế của từng học sinh.`});
   } catch (error) {
     if (!controller.signal.aborted) W({type:"error",message:error?.message === "QUOTA_EXCEEDED"
       ? "Gemini đã hết lượt sử dụng. Vui lòng thử lại sau."
