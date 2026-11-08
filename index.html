@@ -2324,7 +2324,7 @@
             }
             window.regularEvaluationRuntime.bulkSummary=null;
             if(key==='grade' && !r.settings.className) r.settings.className=state.admin?.className||'LỚP HỌC';
-            saveData(); renderLayout();
+            saveData(); regularEvalSyncDeclaration(); renderLayout();
         };
         window.regularEvalUpdateField = function(studentId, field, value){
             const r=regularEvalState(), ev=regularEvalEnsureEvaluation(studentId,r.settings.month,r.settings.subjectId);
@@ -2338,6 +2338,7 @@
             ev[field]=value;
             if(field.endsWith('_noiDung')&&ev.aiCommentScores){delete ev.aiCommentScores[field];}
             window.regularEvaluationRuntime.bulkSummary=null; saveData();
+            if(REGULAR_EVAL_LEVEL_FIELDS.includes(field)||field.endsWith('_noiDung'))regularEvalSyncDeclaration();
             if(field.endsWith('_noiDung')){
                 const counter=document.querySelector(`[data-regular-counter="${CSS.escape(String(studentId))}-${field}"]`);
                 if(counter){const n=String(value).length;counter.textContent=`${n}/250`;counter.className=`regular-eval-count ${regularEvalCountClass(value)}`;}
@@ -2727,7 +2728,7 @@ Nếu nhóm Không chọn thì noiDung rỗng, không tự đoán điểm. Trư�
                 regularEvalSetLoading(`Đang tạo nhận xét cho ${student.name}…`);
                 const result=await regularEvalGenerateComment(student,completion.levels);
                 regularEvalApplyAiResult(ev,result,completion.levels,student);
-                await saveData();regularEvalSetLoading('');renderLayout();
+                await saveData();regularEvalSyncDeclaration();regularEvalSetLoading('');renderLayout();
                 const after=regularEvalStudentCompletion(student);
                 showToast(after.complete?'Đã tạo đủ 4 nhận xét hợp lệ theo điểm và KHDH.':`Còn mục cần viết lại: ${after.missingGroups.map(g=>g.label).join(', ')}` ,after.complete?'success':'error');
             }catch(e){regularEvalSetLoading('');console.error(e);showToast(`AI lỗi: ${e?.message||e}`,'error');}
@@ -2806,7 +2807,7 @@ Nếu nhóm Không chọn thì noiDung rỗng, không tự đoán điểm. Trư�
             }finally{
                 rt.bulkRunning=false;regularEvalSetLoading('');
                 const finalScan=regularEvalScanCompletion(students);
-                rt.bulkSummary={...finalScan,contextKey:regularEvalContextKey()};renderLayout();
+                rt.bulkSummary={...finalScan,contextKey:regularEvalContextKey()};regularEvalSyncDeclaration();renderLayout();
                 if(regularEvalContextKey()!==context)showToast('Đã đổi lớp/môn/tháng; dừng AI để tránh ghi nhầm.','error');
                 else if(!finalScan.remaining.length)showToast(`Đã hoàn thành ${finalScan.completed}/${finalScan.total} học sinh bằng batch và kiểm tra từng câu.`,'success');
                 else showToast(`Đã xử lý ${processed} học sinh theo batch. Còn ${finalScan.remaining.length} học sinh cần kiểm tra điểm, khóa hoặc lời nhận xét.`,'error');
@@ -3444,6 +3445,7 @@ Trong KHDH của phân môn Tin học/Công nghệ hoặc Âm nhạc/Mĩ thuật
                 }
                 window.regularEvaluationRuntime.bulkSummary=null;
                 regularEvalSetLoading('');
+                regularEvalSyncDeclaration();
                 renderLayout(); // cập nhật bảng NGAY, không phụ thuộc độ trễ lưu Cloud.
                 await saveData();
                 const subjectsWithData=Object.keys(r.lastExcelImport.subjects).length;
@@ -3464,6 +3466,134 @@ Trong KHDH của phân môn Tin học/Công nghệ hoặc Âm nhạc/Mĩ thuật
             const subject=regularEvalSubject();
             return `<div class="regular-eval-import-notice" role="status"><i class="ph-bold ph-info"></i> File đã nhập chưa có dữ liệu môn ${mfgEsc(subject.name)}${months.length?` trong tháng ${r.settings.month}`:''}. Dữ liệu đã lưu trước đó của môn này vẫn được giữ nguyên.</div>`;
         }
+        // Bảng khai báo: nguồn sự thật là evaluations hiện tại, không lưu bản sao
+        // comment/score riêng trong LocalStorage. Mã dùng chung với Xuất Excel.
+        const REGULAR_EVAL_DECLARATION_TYPES = Object.freeze([
+            {type:'MON_HOC',label:'Môn học/Hoạt động giáo dục',scoreField:'monHoc_ma',contentField:'monHoc_noiDung'},
+            {type:'NLC',label:'Năng lực chung',scoreField:'nlc_ma',contentField:'nlc_noiDung'},
+            {type:'NLDT',label:'Năng lực đặc thù',scoreField:'nldt_ma',contentField:'nldt_noiDung'},
+            {type:'PCCY',label:'Phẩm chất chủ yếu',scoreField:'pc_ma',contentField:'pc_noiDung'}
+        ]);
+        function regularEvalExportScore(ev,type){
+            // UI cập nhật *_ma; null/Không chọn PHẢI giữ trống, không lấy lại điểm cũ.
+            const fields={MON_HOC:['monHoc_ma','monHocScore'],NLC:['nlc_ma','nlcScore'],
+                NLDT:['nldt_ma','nldtScore'],PCCY:['pc_ma','pcScore']};
+            for(const field of fields[type]||[]){
+                if(!ev||!Object.prototype.hasOwnProperty.call(ev,field))continue;
+                try{return normalizeEvaluationScore(ev[field]);}
+                catch{return null;} // Điểm sai không lấy mã/giá trị cũ làm thay thế.
+            }
+            return null;
+        }
+        // Giữ đúng 5 cột và thứ tự NHÓM trong file mẫu gốc: Sheet1.
+        // Bên trong từng nhóm và môn, học sinh luôn theo thứ tự bảng hiện tại.
+        function regularEvalBuildDeclarationRows(){
+            const r=regularEvalState(),students=regularEvalStudents(),month=Number(r.settings.month),
+                  schoolYear=regularEvalSchoolYear(),className=r.settings.className;
+            const subjects=REGULAR_EVAL_SUBJECTS.filter(subject=>students.some(student=>{
+                const ev=regularEvalGetEvaluation(student.id,month,subject.id,schoolYear);
+                return !!ev&&REGULAR_EVAL_DECLARATION_TYPES.some(group=>String(ev[group.contentField]??'').trim());
+            }));
+            const records=[],seen=new Set(),warnings=[];
+            for(const group of REGULAR_EVAL_DECLARATION_TYPES){
+                for(const subject of subjects){
+                    students.forEach((student,index)=>{
+                        const ev=regularEvalGetEvaluation(student.id,month,subject.id,schoolYear);
+                        // STT học sinh dựa vào index hiển thị, không dùng UUID hay mã Bộ GD&ĐT.
+                        const studentOrder=index+1;
+                        const studentKey=String(student.id||`missing-id-${studentOrder}`);
+                        const key=[schoolYear,r.settings.grade,normalizeClassCode(className),month,
+                            subject.id,studentKey,group.type].join('|');
+                        if(seen.has(key))return;
+                        seen.add(key);
+                        const score=regularEvalExportScore(ev,group.type),
+                              comment=String(ev?.[group.contentField]??'').trim();
+                        const code=generateEvaluationExportCode({type:group.type,subjectId:subject.id,
+                            month,score,className,studentOrder});
+                        if(score!==null&&!code)warnings.push(`Không tạo được mã: ${subject.name}, HS STT ${studentOrder}, ${group.label}`);
+                        if(score===null||!comment)warnings.push(`Thiếu ${score===null?'điểm':'nội dung'}: ${subject.name}, HS STT ${studentOrder}, ${group.label}`);
+                        if(comment.length>250)warnings.push(`Nhận xét vượt 250 ký tự: ${subject.name}, HS STT ${studentOrder}, ${group.label}`);
+                        records.push({key,studentId:String(student.id),studentOrder,
+                            studentName:student.name,moetCode:student.code||'',schoolYear,
+                            grade:r.settings.grade,className,month,subjectId:subject.id,
+                            type:group.type,label:group.label,code,comment,score});
+                    });
+                }
+            }
+            const rows=records.map((record,index)=>[index+1,record.label,record.code,record.comment,index+1]);
+            return {records,rows,warnings,subjects:subjects.map(s=>s.id),month,schoolYear,
+                grade:r.settings.grade,className};
+        }
+        // Đồng bộ chỉ số ở bộ nhớ tạm. Mọi lần xuất đều đọc lại evaluations mới nhất.
+        function regularEvalSyncDeclaration(){
+            const result=regularEvalBuildDeclarationRows();
+            window.regularEvaluationRuntime.declarationStatus={month:result.month,className:result.className,
+                subjectCount:result.subjects.length,rowCount:result.rows.length,
+                warningCount:result.warnings.length};
+            return result;
+        }
+        window.regularEvalBuildDeclarationRows=regularEvalBuildDeclarationRows;
+        window.regularEvalSyncDeclaration=regularEvalSyncDeclaration;
+        window.regularEvalExportDeclaration = async function(){
+            try{
+                const view=regularEvalSyncDeclaration();
+                if(!view.rows.length)return showToast('Chưa có môn nào có nội dung nhận xét trong tháng đang chọn.','error');
+                const longComments=view.records.filter(rec=>rec.comment.length>250);
+                if(longComments.length){
+                    alert(`${longComments.length} nhận xét vượt 250 ký tự. Hãy sửa trước khi xuất.\n`+
+                        longComments.slice(0,8).map(rec=>`HS STT ${rec.studentOrder} · ${rec.subjectId} · ${rec.label}`).join('\n'));
+                    return;
+                }
+                // Không mất các bản ghi hoàn chỉnh khi một số mục còn thiếu.
+                if(view.warnings.length&&!confirm(`Một số học sinh chưa có đầy đủ mã hoặc nội dung nhận xét (${view.warnings.length} mục).\nTiếp tục xuất các dữ liệu hiện có?`))return;
+                const XLSX=await regularEvalEnsureXLSX();
+                // Sử dụng file XLS nguyên gốc của giáo viên để giữ 2 Sheet, tiêu đề,
+                // chiều rộng và thông tin định dạng mà SheetJS có thể bảo toàn.
+                const response=await fetch('./assets/mau-bang-khai-bao.xls',{cache:'no-store'});
+                if(!response.ok)throw new Error(`Không tải được mẫu Bảng khai báo (${response.status})`);
+                const template=await response.arrayBuffer();
+                const wb=XLSX.read(template,{type:'array',cellStyles:true,cellNF:true});
+                const sheetName=wb.SheetNames.find(n=>n==='Sheet1')||wb.SheetNames[0];
+                const ws=wb.Sheets[sheetName];
+                if(!ws)throw new Error('Mẫu không có Sheet khai báo.');
+                const header=['STT','Loại nhận xét','Mã nhận xét','Nội dung','Thứ tự hiển thị'];
+                for(let col=0;col<5;col++){
+                    const cell=XLSX.utils.encode_cell({r:0,c:col});
+                    if(String(ws[cell]?.v??'').trim()!==header[col])
+                        throw new Error(`Tiêu đề cột ${col+1} trong mẫu không đúng: ${header[col]}`);
+                }
+                const styleSamples=Array.from({length:5},(_,c)=>ws[XLSX.utils.encode_cell({r:1,c})]?.s);
+                // Xóa nội dung minh họa trong Sheet1, không động tới HUONG_DAN.
+                for(const address of Object.keys(ws)){
+                    if(address.startsWith('!'))continue;
+                    const coord=XLSX.utils.decode_cell(address);
+                    if(coord.r>=1&&coord.c<5)delete ws[address];
+                }
+                for(let rowIndex=0;rowIndex<view.rows.length;rowIndex++){
+                    for(let col=0;col<5;col++){
+                        const value=view.rows[rowIndex][col],address=XLSX.utils.encode_cell({r:rowIndex+1,c:col});
+                        const cell={t:typeof value==='number'?'n':'s',v:value};
+                        if(styleSamples[col]!=null)cell.s=styleSamples[col];
+                        ws[address]=cell;
+                    }
+                }
+                ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:view.rows.length,c:4}});
+                if(!ws['!cols'])ws['!cols']=[{wch:9},{wch:31},{wch:30},{wch:75},{wch:20}];
+                // Kiểm tra mapping trước khi tạo workbook, không cần API Gemini.
+                for(let i=0;i<view.records.length;i++){
+                    const rec=view.records[i];
+                    const cell=ws[XLSX.utils.encode_cell({r:i+1,c:2})];
+                    if(String(cell?.v??'')!==rec.code)throw new Error(`Lệch Mã nhận xét ở dòng ${i+2}`);
+                    const content=ws[XLSX.utils.encode_cell({r:i+1,c:3})];
+                    if(String(content?.v??'')!==rec.comment)throw new Error(`Lệch Nội dung ở dòng ${i+2}`);
+                }
+                const fileName=`Bang_Khai_Bao_Thuong_Xuyen_Lop${normalizeClassCode(view.className)||'Lop'}_Thang${view.month}.xlsx`;
+                XLSX.writeFile(wb,fileName,{bookType:'xlsx',cellStyles:true});
+                showToast(`Đã xuất ${view.rows.length} dòng từ ${view.subjects.length} môn, đúng mẫu khai báo.`, 'success');
+            }catch(error){console.error('Lỗi Xuất bảng khai báo:',error);
+                showToast(`Không xuất được Bảng khai báo: ${error?.message||error}`,'error');}
+        };
+
         window.regularEvalExportExcel = async function(){
             try{
                 const r=regularEvalState(),students=regularEvalStudents(),month=r.settings.month;
@@ -3482,14 +3612,7 @@ Trong KHDH của phân môn Tin học/Công nghệ hoặc Âm nhạc/Mĩ thuật
                 let missingScores=0;
                 selectedSubjects.forEach(({subject,evaluations})=>{
                     const code=(type,ev,index)=>{
-                        const fields={MON_HOC:['monHocScore','monHoc_ma'],NLC:['nlcScore','nlc_ma'],
-                            NLDT:['nldtScore','nldt_ma'],PCCY:['pcScore','pc_ma']};
-                        // Chỉ dùng điểm nguyên 2–10, tuyệt đối không dùng chuỗi Tốt/Đạt/Chưa đạt hay mã cũ.
-                        let score=null;
-                        for(const field of fields[type]||[]){
-                            try{const value=normalizeEvaluationScore(ev?.[field]);if(value!==null){score=value;break;}}
-                            catch{}
-                        }
+                        const score=regularEvalExportScore(ev,type);
                         const result=generateEvaluationExportCode({type,subjectId:subject.id,month,score,
                             className:r.settings.className,studentOrder:index+1});
                         if(!result)missingScores++;
@@ -3549,7 +3672,7 @@ Trong KHDH của phân môn Tin học/Công nghệ hoặc Âm nhạc/Mĩ thuật
                 const classOptions=classes.map(c=>`<option value="${escapeHtmlAttr(c)}" ${c===r.settings.className?'selected':''}>${mfgEsc(c)}</option>`).join('');
                 const rows=students.map((s,idx)=>{const ev=regularEvalGetEvaluation(s.id,r.settings.month,r.settings.subjectId)||regularEvalDefaultEvaluation(s.id,r.settings.month,r.settings.subjectId);return `<tr><td class="regular-eval-cell regular-eval-stt">${idx+1}</td><td class="regular-eval-cell regular-eval-code">${mfgEsc(s.code||'—')}</td><td class="regular-eval-cell regular-eval-name">${mfgEsc(s.name)}</td><td class="regular-eval-cell regular-eval-dob">${mfgEsc(s.dob||'—')}</td><td class="regular-eval-cell regular-eval-month">${r.settings.month}</td><td class="regular-eval-ai-cell">${regularEvalAiControl(s.id,ev)}</td>${regularEvalCodeCell(s.id,'monHoc_ma',ev.monHoc_ma,ev.isLocked)}${regularEvalTextCell(s.id,'monHoc_noiDung',ev.monHoc_noiDung,ev.isLocked)}${regularEvalCodeCell(s.id,'nlc_ma',ev.nlc_ma,ev.isLocked)}${regularEvalTextCell(s.id,'nlc_noiDung',ev.nlc_noiDung,ev.isLocked)}${regularEvalCodeCell(s.id,'nldt_ma',ev.nldt_ma,ev.isLocked)}${regularEvalTextCell(s.id,'nldt_noiDung',ev.nldt_noiDung,ev.isLocked)}${regularEvalCodeCell(s.id,'pc_ma',ev.pc_ma,ev.isLocked)}${regularEvalTextCell(s.id,'pc_noiDung',ev.pc_noiDung,ev.isLocked)}</tr>`;}).join('');
                 const schoolYear=state.settings?.schoolYear||state.admin?.schoolYear||state.schoolYear||'Năm học hiện tại';
-                return `<section class="regular-eval-page"><div class="regular-eval-toolbar"><button type="button" onclick="switchTab('nhan-xet')" class="regular-eval-back"><i class="ph-bold ph-arrow-left"></i> Quay lại Nhận xét</button><span class="regular-eval-chip"><i class="ph-fill ph-floppy-disk"></i>Tự động lưu cùng dữ liệu app</span></div><div class="regular-eval-hero"><div class="regular-eval-hero-main"><div class="regular-eval-hero-icon"><i class="ph-fill ph-calendar-pencil"></i></div><div><div class="regular-eval-eyebrow">Nhận xét học sinh · Theo tháng</div><h1 class="regular-eval-title">Nhập đánh giá thường xuyên</h1><p class="regular-eval-subtitle">Mặc định tái sử dụng hồ sơ học sinh chung của app GVCN. Khi Xóa/Nhập dữ liệu tại đây, module dùng danh sách làm việc riêng để tránh ảnh hưởng hồ sơ học sinh toàn app. AI vẫn dùng chung Gemini API đã cấu hình.</p></div></div><div class="regular-eval-context"><span class="regular-eval-chip"><i class="ph-fill ph-student"></i>${mfgEsc(r.settings.className)}</span><span class="regular-eval-chip"><i class="ph-fill ph-users-three"></i>${students.length} học sinh</span><span class="regular-eval-chip"><i class="ph-fill ph-chalkboard-teacher"></i>${mfgEsc(state.admin?.name||'Giáo viên')}</span><span class="regular-eval-chip"><i class="ph-fill ph-calendar-dots"></i>${mfgEsc(schoolYear)}</span></div></div><div class="regular-eval-panel"><div class="regular-eval-filter"><div class="regular-eval-filter-grid"><div class="regular-eval-field"><label>Khối</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('grade',this.value)">${[1,2,3,4,5].map(g=>`<option value="${g}" ${String(g)===String(r.settings.grade)?'selected':''}>Khối ${g}</option>`).join('')}</select></div><div class="regular-eval-field"><label>Chọn lớp</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('className',this.value)">${classOptions}</select></div><div class="regular-eval-field"><label>Tên lớp (có thể sửa)</label><div style="display:flex;gap:6px"><input id="regular-eval-classname-edit" type="text" class="regular-eval-input" style="min-width:0;flex:1" value="${escapeHtmlAttr(r.settings.className)}" maxlength="35" aria-label="Sửa tên lớp" onkeydown="if(event.key==='Enter'){event.preventDefault();regularEvalRenameClass()}"/><button type="button" class="regular-eval-btn indigo" style="flex-shrink:0" onclick="regularEvalRenameClass()" title="Lưu tên lớp mới">Lưu</button></div></div><div class="regular-eval-field"><label>Tháng</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('month',this.value)">${REGULAR_EVAL_MONTHS.map(m=>`<option value="${m}" ${Number(m)===Number(r.settings.month)?'selected':''}>Tháng ${m}</option>`).join('')}</select></div><div class="regular-eval-field"><label>Môn học</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('subjectId',this.value)">${subjects.map(s=>`<option value="${s.id}" ${s.id===r.settings.subjectId?'selected':''}>${mfgEsc(s.name)}</option>`).join('')}</select></div></div><div class="regular-eval-actions"><button class="regular-eval-btn red" onclick="regularEvalClearData()" title="Xóa danh sách làm việc và dữ liệu đánh giá trong module, không xóa hồ sơ học sinh chung"><i class="ph-bold ph-trash"></i> Xóa</button><button class="regular-eval-btn gray" onclick="regularEvalDownloadTemplate()"><i class="ph-bold ph-download-simple"></i> Mẫu Excel</button><button class="regular-eval-btn indigo" onclick="regularEvalOpenImport()"><i class="ph-bold ph-upload-simple"></i> Nhập dữ liệu</button><button class="regular-eval-btn ai" onclick="regularEvalGenerateBulk()"><i class="ph-fill ph-sparkle"></i> AI toàn lớp</button><button class="regular-eval-btn export" onclick="regularEvalExportExcel()"><i class="ph-bold ph-file-xls"></i> Xuất Excel</button></div></div>${regularEvalKhdhPanelHtml()}</div><input type="file" id="regular-eval-import-input" class="hidden" accept=".xlsx,.xls,.csv" onchange="regularEvalHandleImport(this)"><input type="file" id="regular-eval-khdh-input" class="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.json" onchange="regularEvalHandleKHDHFile(this)"><div class="regular-eval-table-wrap custom-scrollbar"><table class="regular-eval-table"><thead><tr><th rowspan="2">STT</th><th rowspan="2">Mã định danh Bộ GD&amp;ĐT</th><th rowspan="2">Họ và tên</th><th rowspan="2">Ngày sinh</th><th rowspan="2">Tháng</th><th rowspan="2" style="background:#dbeafe;color:#1e40af">Thao tác AI</th><th colspan="2">Môn học và hoạt động giáo dục</th><th colspan="2">Nhận xét năng lực chung</th><th colspan="2">Nhận xét năng lực đặc thù</th><th colspan="2">Nhận xét phẩm chất chủ yếu</th></tr><tr><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th></tr></thead><tbody>${rows||`<tr><td colspan="14" class="regular-eval-empty"><i class="ph-duotone ph-users"></i>Bảng đánh giá đang trống. Bấm “Nhập dữ liệu” để tải danh sách học sinh mới; hồ sơ học sinh chung của app không bị ảnh hưởng.</td></tr>`}</tbody></table></div></section>`;
+                return `<section class="regular-eval-page"><div class="regular-eval-toolbar"><button type="button" onclick="switchTab('nhan-xet')" class="regular-eval-back"><i class="ph-bold ph-arrow-left"></i> Quay lại Nhận xét</button><span class="regular-eval-chip"><i class="ph-fill ph-floppy-disk"></i>Tự động lưu cùng dữ liệu app</span></div><div class="regular-eval-hero"><div class="regular-eval-hero-main"><div class="regular-eval-hero-icon"><i class="ph-fill ph-calendar-pencil"></i></div><div><div class="regular-eval-eyebrow">Nhận xét học sinh · Theo tháng</div><h1 class="regular-eval-title">Nhập đánh giá thường xuyên</h1><p class="regular-eval-subtitle">Mặc định tái sử dụng hồ sơ học sinh chung của app GVCN. Khi Xóa/Nhập dữ liệu tại đây, module dùng danh sách làm việc riêng để tránh ảnh hưởng hồ sơ học sinh toàn app. AI vẫn dùng chung Gemini API đã cấu hình.</p></div></div><div class="regular-eval-context"><span class="regular-eval-chip"><i class="ph-fill ph-student"></i>${mfgEsc(r.settings.className)}</span><span class="regular-eval-chip"><i class="ph-fill ph-users-three"></i>${students.length} học sinh</span><span class="regular-eval-chip"><i class="ph-fill ph-chalkboard-teacher"></i>${mfgEsc(state.admin?.name||'Giáo viên')}</span><span class="regular-eval-chip"><i class="ph-fill ph-calendar-dots"></i>${mfgEsc(schoolYear)}</span></div></div><div class="regular-eval-panel"><div class="regular-eval-filter"><div class="regular-eval-filter-grid"><div class="regular-eval-field"><label>Khối</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('grade',this.value)">${[1,2,3,4,5].map(g=>`<option value="${g}" ${String(g)===String(r.settings.grade)?'selected':''}>Khối ${g}</option>`).join('')}</select></div><div class="regular-eval-field"><label>Chọn lớp</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('className',this.value)">${classOptions}</select></div><div class="regular-eval-field"><label>Tên lớp (có thể sửa)</label><div style="display:flex;gap:6px"><input id="regular-eval-classname-edit" type="text" class="regular-eval-input" style="min-width:0;flex:1" value="${escapeHtmlAttr(r.settings.className)}" maxlength="35" aria-label="Sửa tên lớp" onkeydown="if(event.key==='Enter'){event.preventDefault();regularEvalRenameClass()}"/><button type="button" class="regular-eval-btn indigo" style="flex-shrink:0" onclick="regularEvalRenameClass()" title="Lưu tên lớp mới">Lưu</button></div></div><div class="regular-eval-field"><label>Tháng</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('month',this.value)">${REGULAR_EVAL_MONTHS.map(m=>`<option value="${m}" ${Number(m)===Number(r.settings.month)?'selected':''}>Tháng ${m}</option>`).join('')}</select></div><div class="regular-eval-field"><label>Môn học</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('subjectId',this.value)">${subjects.map(s=>`<option value="${s.id}" ${s.id===r.settings.subjectId?'selected':''}>${mfgEsc(s.name)}</option>`).join('')}</select></div></div><div class="regular-eval-actions"><button class="regular-eval-btn red" onclick="regularEvalClearData()" title="Xóa danh sách làm việc và dữ liệu đánh giá trong module, không xóa hồ sơ học sinh chung"><i class="ph-bold ph-trash"></i> Xóa</button><button class="regular-eval-btn gray" onclick="regularEvalDownloadTemplate()"><i class="ph-bold ph-download-simple"></i> Mẫu Excel</button><button class="regular-eval-btn indigo" onclick="regularEvalOpenImport()"><i class="ph-bold ph-upload-simple"></i> Nhập dữ liệu</button><button class="regular-eval-btn ai" onclick="regularEvalGenerateBulk()"><i class="ph-fill ph-sparkle"></i> AI toàn lớp</button><button class="regular-eval-btn export" onclick="regularEvalExportDeclaration()" title="Xuất bảng khai báo theo mẫu gốc, giữ đúng thứ tự học sinh"><i class="ph-bold ph-table"></i> Xuất bảng khai báo</button><button class="regular-eval-btn export" onclick="regularEvalExportExcel()"><i class="ph-bold ph-file-xls"></i> Xuất Excel</button></div></div>${regularEvalKhdhPanelHtml()}</div><input type="file" id="regular-eval-import-input" class="hidden" accept=".xlsx,.xls,.csv" onchange="regularEvalHandleImport(this)"><input type="file" id="regular-eval-khdh-input" class="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.json" onchange="regularEvalHandleKHDHFile(this)"><div class="regular-eval-table-wrap custom-scrollbar"><table class="regular-eval-table"><thead><tr><th rowspan="2">STT</th><th rowspan="2">Mã định danh Bộ GD&amp;ĐT</th><th rowspan="2">Họ và tên</th><th rowspan="2">Ngày sinh</th><th rowspan="2">Tháng</th><th rowspan="2" style="background:#dbeafe;color:#1e40af">Thao tác AI</th><th colspan="2">Môn học và hoạt động giáo dục</th><th colspan="2">Nhận xét năng lực chung</th><th colspan="2">Nhận xét năng lực đặc thù</th><th colspan="2">Nhận xét phẩm chất chủ yếu</th></tr><tr><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th></tr></thead><tbody>${rows||`<tr><td colspan="14" class="regular-eval-empty"><i class="ph-duotone ph-users"></i>Bảng đánh giá đang trống. Bấm “Nhập dữ liệu” để tải danh sách học sinh mới; hồ sơ học sinh chung của app không bị ảnh hưởng.</td></tr>`}</tbody></table></div></section>`;
             }
         };
 
@@ -3577,7 +3700,7 @@ Trong KHDH của phân môn Tin học/Công nghệ hoặc Âm nhạc/Mĩ thuật
             const r=regularEvalState(),subject=regularEvalSubject(),subjects=regularEvalSubjectsForGrade(r.settings.grade),students=regularEvalStudents(),khdh=r.khdhMap[regularEvalKhdhKey()]||'',classes=regularEvalClassOptions();
             const classOptions=classes.map(c=>`<option value="${escapeHtmlAttr(c)}" ${c===r.settings.className?'selected':''}>${mfgEsc(c)}</option>`).join('');
             const rows=students.map((s,idx)=>{const ev=regularEvalGetEvaluation(s.id,r.settings.month,r.settings.subjectId)||regularEvalDefaultEvaluation(s.id,r.settings.month,r.settings.subjectId);return `<tr><td class="regular-eval-cell regular-eval-stt">${idx+1}</td><td class="regular-eval-cell regular-eval-code">${mfgEsc(s.code||'—')}</td><td class="regular-eval-cell regular-eval-name">${mfgEsc(s.name)}</td><td class="regular-eval-cell regular-eval-dob">${mfgEsc(s.dob||'—')}</td><td class="regular-eval-cell">${mfgEsc(s.gender||'—')}</td><td class="regular-eval-cell">${mfgEsc(s.group||'—')}</td><td class="regular-eval-cell regular-eval-month">${r.settings.month}</td><td class="regular-eval-ai-cell">${regularEvalAiControl(s.id,ev)}</td>${regularEvalCodeCell(s.id,'monHoc_ma',ev.monHoc_ma,ev.isLocked)}${regularEvalTextCell(s.id,'monHoc_noiDung',ev.monHoc_noiDung,ev.isLocked)}${regularEvalCodeCell(s.id,'nlc_ma',ev.nlc_ma,ev.isLocked)}${regularEvalTextCell(s.id,'nlc_noiDung',ev.nlc_noiDung,ev.isLocked)}${regularEvalCodeCell(s.id,'nldt_ma',ev.nldt_ma,ev.isLocked)}${regularEvalTextCell(s.id,'nldt_noiDung',ev.nldt_noiDung,ev.isLocked)}${regularEvalCodeCell(s.id,'pc_ma',ev.pc_ma,ev.isLocked)}${regularEvalTextCell(s.id,'pc_noiDung',ev.pc_noiDung,ev.isLocked)}</tr>`;}).join('');
-            return `<section class="regular-eval-page"><div class="regular-eval-toolbar"><button type="button" onclick="switchTab('nhan-xet')" class="regular-eval-back"><i class="ph-bold ph-arrow-left"></i> Quay lại Nhận xét</button><span class="regular-eval-chip"><i class="ph-fill ph-arrows-clockwise"></i>Tự đồng bộ hồ sơ học sinh chung</span></div><div class="regular-eval-hero"><div class="regular-eval-hero-main"><div class="regular-eval-hero-icon"><i class="ph-fill ph-calendar-pencil"></i></div><div><div class="regular-eval-eyebrow">Nhận xét học sinh · Theo tháng</div><h1 class="regular-eval-title">Nhập đánh giá thường xuyên</h1><p class="regular-eval-subtitle">Danh sách luôn lấy trực tiếp từ Quản lý học sinh chung. File Excel chỉ bổ sung/cập nhật hồ sơ và không xóa dữ liệu cũ khi ô để trống. Nhận xét được lưu riêng theo học sinh, năm học, tháng và môn.</p></div></div><div class="regular-eval-context"><span class="regular-eval-chip"><i class="ph-fill ph-users-three"></i>${students.length} học sinh</span><span class="regular-eval-chip"><i class="ph-fill ph-calendar-dots"></i>${mfgEsc(regularEvalSchoolYear())}</span></div></div><div class="regular-eval-panel"><div class="regular-eval-filter"><div class="regular-eval-filter-grid"><div class="regular-eval-field"><label>Khối</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('grade',this.value)">${[1,2,3,4,5].map(g=>`<option value="${g}" ${String(g)===String(r.settings.grade)?'selected':''}>Khối ${g}</option>`).join('')}</select></div><div class="regular-eval-field"><label>Chọn lớp</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('className',this.value)">${classOptions}</select></div><div class="regular-eval-field"><label>Tên lớp (có thể sửa)</label><div style="display:flex;gap:6px"><input id="regular-eval-classname-edit" type="text" class="regular-eval-input" style="min-width:0;flex:1" value="${escapeHtmlAttr(r.settings.className)}" maxlength="35" aria-label="Sửa tên lớp" onkeydown="if(event.key==='Enter'){event.preventDefault();regularEvalRenameClass()}"/><button type="button" class="regular-eval-btn indigo" style="flex-shrink:0" onclick="regularEvalRenameClass()" title="Lưu tên lớp mới">Lưu</button></div></div><div class="regular-eval-field"><label>Tháng</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('month',this.value)">${REGULAR_EVAL_MONTHS.map(m=>`<option value="${m}" ${Number(m)===Number(r.settings.month)?'selected':''}>Tháng ${m}</option>`).join('')}</select></div><div class="regular-eval-field"><label>Môn học</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('subjectId',this.value)">${subjects.map(s=>`<option value="${s.id}" ${s.id===r.settings.subjectId?'selected':''}>${mfgEsc(s.name)}</option>`).join('')}</select></div></div><div class="regular-eval-actions"><button class="regular-eval-btn red" onclick="regularEvalClearData()"><i class="ph-bold ph-trash"></i> Xóa đánh giá</button><button class="regular-eval-btn gray" onclick="regularEvalDownloadTemplate()"><i class="ph-bold ph-download-simple"></i> Mẫu Excel</button><button class="regular-eval-btn indigo" onclick="regularEvalOpenImport()"><i class="ph-bold ph-upload-simple"></i> Nhập File mẫu</button><button class="regular-eval-btn gray" onclick="regularEvalOpenHistory()"><i class="ph-bold ph-clock-counter-clockwise"></i> Lịch sử nhận xét</button><button class="regular-eval-btn gray" onclick="regularEvalNormalizeExistingComments()" title="AI viết lại câu cũ chưa đúng quy tắc, không sửa nhận xét đã khóa"><i class="ph-bold ph-text-aa"></i> Chuẩn hóa lời nhận xét</button><button class="regular-eval-btn ai" onclick="regularEvalGenerateBulk()"><i class="ph-fill ph-sparkle"></i> AI toàn lớp</button><button class="regular-eval-btn export" onclick="regularEvalExportExcel()"><i class="ph-bold ph-file-xls"></i> Xuất Excel</button></div></div>${regularEvalKhdhPanelHtml()}</div><input type="file" id="regular-eval-import-input" class="hidden" accept=".xlsx,.xls,.csv" onchange="regularEvalHandleImport(this)"><input type="file" id="regular-eval-khdh-input" class="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.json" onchange="regularEvalHandleKHDHFile(this)">${regularEvalImportedSubjectNotice()}${regularEvalBulkSummaryHtml()}${regularEvalHistoryHtml(students)}<div class="regular-eval-table-wrap custom-scrollbar"><table class="regular-eval-table"><thead><tr><th rowspan="2">STT</th><th rowspan="2">Mã định danh Bộ GD&amp;ĐT</th><th rowspan="2">Họ và tên</th><th rowspan="2">Ngày sinh</th><th rowspan="2">Giới tính</th><th rowspan="2">Tổ</th><th rowspan="2">Tháng</th><th rowspan="2">Thao tác AI</th><th colspan="2">Môn học và hoạt động giáo dục</th><th colspan="2">Nhận xét năng lực chung</th><th colspan="2">Nhận xét năng lực đặc thù</th><th colspan="2">Nhận xét phẩm chất chủ yếu</th></tr><tr><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th></tr></thead><tbody>${rows||`<tr><td colspan="16" class="regular-eval-empty"><i class="ph-duotone ph-users"></i>Chưa có hồ sơ học sinh chung. Hãy thêm tại Quản lý học sinh hoặc dùng “Nhập File mẫu”.</td></tr>`}</tbody></table></div></section>`;
+            return `<section class="regular-eval-page"><div class="regular-eval-toolbar"><button type="button" onclick="switchTab('nhan-xet')" class="regular-eval-back"><i class="ph-bold ph-arrow-left"></i> Quay lại Nhận xét</button><span class="regular-eval-chip"><i class="ph-fill ph-arrows-clockwise"></i>Tự đồng bộ hồ sơ học sinh chung</span></div><div class="regular-eval-hero"><div class="regular-eval-hero-main"><div class="regular-eval-hero-icon"><i class="ph-fill ph-calendar-pencil"></i></div><div><div class="regular-eval-eyebrow">Nhận xét học sinh · Theo tháng</div><h1 class="regular-eval-title">Nhập đánh giá thường xuyên</h1><p class="regular-eval-subtitle">Danh sách luôn lấy trực tiếp từ Quản lý học sinh chung. File Excel chỉ bổ sung/cập nhật hồ sơ và không xóa dữ liệu cũ khi ô để trống. Nhận xét được lưu riêng theo học sinh, năm học, tháng và môn.</p></div></div><div class="regular-eval-context"><span class="regular-eval-chip"><i class="ph-fill ph-users-three"></i>${students.length} học sinh</span><span class="regular-eval-chip"><i class="ph-fill ph-calendar-dots"></i>${mfgEsc(regularEvalSchoolYear())}</span></div></div><div class="regular-eval-panel"><div class="regular-eval-filter"><div class="regular-eval-filter-grid"><div class="regular-eval-field"><label>Khối</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('grade',this.value)">${[1,2,3,4,5].map(g=>`<option value="${g}" ${String(g)===String(r.settings.grade)?'selected':''}>Khối ${g}</option>`).join('')}</select></div><div class="regular-eval-field"><label>Chọn lớp</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('className',this.value)">${classOptions}</select></div><div class="regular-eval-field"><label>Tên lớp (có thể sửa)</label><div style="display:flex;gap:6px"><input id="regular-eval-classname-edit" type="text" class="regular-eval-input" style="min-width:0;flex:1" value="${escapeHtmlAttr(r.settings.className)}" maxlength="35" aria-label="Sửa tên lớp" onkeydown="if(event.key==='Enter'){event.preventDefault();regularEvalRenameClass()}"/><button type="button" class="regular-eval-btn indigo" style="flex-shrink:0" onclick="regularEvalRenameClass()" title="Lưu tên lớp mới">Lưu</button></div></div><div class="regular-eval-field"><label>Tháng</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('month',this.value)">${REGULAR_EVAL_MONTHS.map(m=>`<option value="${m}" ${Number(m)===Number(r.settings.month)?'selected':''}>Tháng ${m}</option>`).join('')}</select></div><div class="regular-eval-field"><label>Môn học</label><select class="regular-eval-input" onchange="regularEvalUpdateSetting('subjectId',this.value)">${subjects.map(s=>`<option value="${s.id}" ${s.id===r.settings.subjectId?'selected':''}>${mfgEsc(s.name)}</option>`).join('')}</select></div></div><div class="regular-eval-actions"><button class="regular-eval-btn red" onclick="regularEvalClearData()"><i class="ph-bold ph-trash"></i> Xóa đánh giá</button><button class="regular-eval-btn gray" onclick="regularEvalDownloadTemplate()"><i class="ph-bold ph-download-simple"></i> Mẫu Excel</button><button class="regular-eval-btn indigo" onclick="regularEvalOpenImport()"><i class="ph-bold ph-upload-simple"></i> Nhập File mẫu</button><button class="regular-eval-btn gray" onclick="regularEvalOpenHistory()"><i class="ph-bold ph-clock-counter-clockwise"></i> Lịch sử nhận xét</button><button class="regular-eval-btn gray" onclick="regularEvalNormalizeExistingComments()" title="AI viết lại câu cũ chưa đúng quy tắc, không sửa nhận xét đã khóa"><i class="ph-bold ph-text-aa"></i> Chuẩn hóa lời nhận xét</button><button class="regular-eval-btn ai" onclick="regularEvalGenerateBulk()"><i class="ph-fill ph-sparkle"></i> AI toàn lớp</button><button class="regular-eval-btn export" onclick="regularEvalExportDeclaration()" title="Xuất bảng khai báo theo mẫu gốc, giữ đúng thứ tự học sinh"><i class="ph-bold ph-table"></i> Xuất bảng khai báo</button><button class="regular-eval-btn export" onclick="regularEvalExportExcel()"><i class="ph-bold ph-file-xls"></i> Xuất Excel</button></div></div>${regularEvalKhdhPanelHtml()}</div><input type="file" id="regular-eval-import-input" class="hidden" accept=".xlsx,.xls,.csv" onchange="regularEvalHandleImport(this)"><input type="file" id="regular-eval-khdh-input" class="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.json" onchange="regularEvalHandleKHDHFile(this)">${regularEvalImportedSubjectNotice()}${regularEvalBulkSummaryHtml()}${regularEvalHistoryHtml(students)}<div class="regular-eval-table-wrap custom-scrollbar"><table class="regular-eval-table"><thead><tr><th rowspan="2">STT</th><th rowspan="2">Mã định danh Bộ GD&amp;ĐT</th><th rowspan="2">Họ và tên</th><th rowspan="2">Ngày sinh</th><th rowspan="2">Giới tính</th><th rowspan="2">Tổ</th><th rowspan="2">Tháng</th><th rowspan="2">Thao tác AI</th><th colspan="2">Môn học và hoạt động giáo dục</th><th colspan="2">Nhận xét năng lực chung</th><th colspan="2">Nhận xét năng lực đặc thù</th><th colspan="2">Nhận xét phẩm chất chủ yếu</th></tr><tr><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th><th>Mã (điểm)</th><th>Nội dung</th></tr></thead><tbody>${rows||`<tr><td colspan="16" class="regular-eval-empty"><i class="ph-duotone ph-users"></i>Chưa có hồ sơ học sinh chung. Hãy thêm tại Quản lý học sinh hoặc dùng “Nhập File mẫu”.</td></tr>`}</tbody></table></div></section>`;
         };
 
         const regularEvalRenderBase=RegularEvaluationPage.render;
