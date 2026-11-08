@@ -2609,7 +2609,9 @@ Nếu nhóm Không chọn thì noiDung rỗng, không tự đoán điểm. Trư�
             if(!summary.remaining.length)return `<div class="regular-eval-bulk-summary"><div class="regular-eval-bulk-summary-main"><div class="regular-eval-bulk-summary-title"><i class="ph-fill ph-check-circle"></i>Đã hoàn thành: ${summary.completed}/${summary.total} học sinh</div><div class="regular-eval-bulk-summary-detail">Mỗi học sinh có đủ 4 điểm và 4 nội dung nhận xét hợp lệ.</div></div></div>`;
             const names=summary.remaining.map(item=>item.student.name).join(', ');
             const details=summary.remaining.map(item=>`${item.student.name}: ${item.reasons.join('; ')}${summary.failures?.[String(item.student.id)]?' (AI: '+summary.failures[String(item.student.id)]+')':''}`).join(' · ');
-            return `<div class="regular-eval-bulk-summary warning"><div class="regular-eval-bulk-summary-main"><div class="regular-eval-bulk-summary-title"><i class="ph-fill ph-warning-circle"></i>Còn ${summary.remaining.length} học sinh chưa hoàn tất: ${mfgEsc(names)}</div><div class="regular-eval-bulk-summary-detail">${mfgEsc(details)}</div></div><button type="button" class="regular-eval-btn ai" onclick="regularEvalGenerateMissing()"><i class="ph-fill ph-arrows-clockwise"></i>Tạo bổ sung nhận xét còn thiếu</button></div>`;
+            // Sau khi chạy bổ sung, chỉ hiển thị lý do các mục còn thiếu, không đòi giáo viên bấm nút thêm lần nữa.
+            // Nút bổ sung duy nhất vẫn nằm trên thanh chức năng để sử dụng cho những lần chỉnh sửa sau.
+            return `<div class="regular-eval-bulk-summary warning"><div class="regular-eval-bulk-summary-main"><div class="regular-eval-bulk-summary-title"><i class="ph-fill ph-warning-circle"></i>Còn ${summary.remaining.length} học sinh chưa hoàn tất: ${mfgEsc(names)}</div><div class="regular-eval-bulk-summary-detail">${mfgEsc(details)}</div></div></div>`;
         }
         // Chống nhận xét lặp cả giữa 4 nhóm, giữa học sinh và khi lấy lại câu của tháng trước.
         // So sánh bản đã bỏ dấu/case/dấu câu; bắt cả câu gần giống nếu chỉ thay 1-2 từ.
@@ -2809,8 +2811,13 @@ Nếu nhóm Không chọn thì noiDung rỗng, không tự đoán điểm. Trư�
             const scan=regularEvalScanCompletion(students);
             const invalidScores=scan.remaining.filter(item=>item.missingScoreGroups.length||regularEvalHasInvalidLevels(item.ev));
             if(invalidScores.length){
-                alert(`Còn ${invalidScores.length} học sinh thiếu điểm/điểm lỗi. AI không đoán điểm; chỉ viết cho các nhóm đã có điểm.\n\n`+
-                    invalidScores.map(item=>`${item.student.name}: ${item.missingScoreGroups.map(g=>g.label).join(', ')}`).join('\n').slice(0,5000));
+                const message=`Còn ${invalidScores.length} học sinh thiếu điểm/điểm lỗi. AI không đoán điểm; vẫn tự tạo cho các nhóm đã có điểm.`;
+                if(onlyMissing){
+                    // Nút bổ sung chạy ngay sau một lần bấm, không chặn bởi alert/confirm.
+                    showToast(message,'error');
+                }else{
+                    alert(message+'\n\n'+invalidScores.map(item=>`${item.student.name}: ${item.missingScoreGroups.map(g=>g.label).join(', ')}`).join('\n').slice(0,5000));
+                }
             }
             // Thiếu/lỗi điểm của MỘT nhóm không được làm các nhóm đã có điểm bị bỏ qua.
             // Vẫn tuyệt đối không đoán điểm cho nhóm chưa chọn và không sửa nhận xét đã khóa.
