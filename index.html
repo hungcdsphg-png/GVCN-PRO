@@ -3271,6 +3271,109 @@ Trong KHDH của phân môn Tin học/Công nghệ hoặc Âm nhạc/Mĩ thuật
             finally{regularEvalSetLoading('');if(input)input.value='';}
         };
 
+        // SHARED KHDH SERVICE for the periodic subject evaluation iframe.
+        // This deliberately reuses the regular evaluation validator, normalized
+        // KHDH storage, subject mapping and source-file readers (no second JSON schema).
+        window.__GVCNPeriodicKHDHBridge = {
+            year: () => regularEvalSchoolYear(),
+            subjectId(name){
+                return KHDHJson.resolveSubject(name,REGULAR_EVAL_SUBJECTS) ||
+                    REGULAR_EVAL_SUBJECTS.find(s=>KHDHStructured.fold(s.name)===KHDHStructured.fold(name))?.id || null;
+            },
+            subjectCode(name){
+                const id=this.subjectId(name);
+                return id?REGULAR_EVAL_SUBJECT_CODE[id]||'':'';
+            },
+            className(){return String(regularEvalState().settings.className||state.admin?.className||'').trim();},
+            // Teacher may adjust cutoff weeks separately; no fabricated lesson dates.
+            context({grade,subject,period,cutoffs}){
+                const year=regularEvalSchoolYear(),g=Number(String(grade).match(/[1-5]/)?.[0]);
+                const id=this.subjectId(subject);
+                if(!id||!g)throw Error('Chưa nhận diện được khối hoặc môn học trong KHDH.');
+                const code={"Giữa kì 1":"GK1","Cuối kì 1":"CK1","Giữa kì 2":"GK2","Cuối kì 2":"CK2",GK1:'GK1',CK1:'CK1',GK2:'GK2',CK2:'CK2'}[period];
+                if(!code)throw Error('Giai đoạn đánh giá không hợp lệ.');
+                const maxima={GK1:9,CK1:18,GK2:27,CK2:35};
+                const end=Number(cutoffs?.[code]||maxima[code]);
+                const start=code.endsWith('2')?19:1;
+                if(!Number.isInteger(end)||end<start||end>53)throw Error('Tuần kết thúc giai đoạn không hợp lệ.');
+                const document=regularEvalState().khdhDocuments?.[regularEvalKhdhDocumentKey(g,id,year)];
+                const weekOne=regularEvalKhdhWeekOne(year);
+                const records=Array.isArray(document?.records)?KHDHStructured.enrichRecords(document.records,{weekOneDate:weekOne}):[];
+                const selected=[],uncertain=[];
+                for(const lesson of records){
+                    const ws=Number(lesson.weekStart),we=Number(lesson.weekEnd||lesson.weekStart);
+                    if(ws>0 && we>0){if(ws<=end&&we>=start)selected.push(lesson);continue;}
+                    // Use actual lesson dates when week numbers are unavailable and the calendar exists.
+                    if(weekOne && (lesson.startDate||lesson.endDate)){
+                        const anchor=new Date(weekOne+'T00:00:00Z');
+                        const calc=v=>Math.floor((Date.parse(v+'T00:00:00Z')-anchor.getTime())/604800000)+1;
+                        const first=calc(lesson.startDate||lesson.endDate),last=calc(lesson.endDate||lesson.startDate);
+                        if(first<=end&&last>=start)selected.push(lesson);
+                    }else uncertain.push(lesson.lessonName);
+                }
+                const byTopic=new Map();
+                for(const lesson of selected){
+                    const name=String(lesson.topic||'Chưa xác định chủ đề');
+                    if(!byTopic.has(name))byTopic.set(name,[]);
+                    byTopic.get(name).push({lessonNumber:lesson.lessonNumber||'',lessonName:lesson.lessonName,periods:lesson.periods,weekStart:lesson.weekStart,weekEnd:lesson.weekEnd,focus:lesson.focus||''});
+                }
+                const topics=[...byTopic].map(([name,lessons])=>({name,lessons}));
+                const text=topics.map(t=>`Chủ đề: ${t.name}\n`+t.lessons.map(l=>`- ${l.lessonName}${l.focus?' — '+l.focus:''}${l.weekStart?' (tuần '+l.weekStart+(l.weekEnd&&l.weekEnd!==l.weekStart?'-'+l.weekEnd:'')+')':''}`).join('\n')).join('\n').slice(0,13000);
+                return {schoolYear:year,grade:g,subjectId:id,subject,period:code,weekStart:start,weekEnd:end,topics,lessonCount:selected.length,uncertain:uncertain.slice(0,20),text,exists:!!document};
+            },
+            async importFile(file,{grade,subject}){
+                if(!file)throw Error('Chưa chọn file KHDH.');
+                const g=Number(String(grade).match(/[1-5]/)?.[0]),id=this.subjectId(subject),year=regularEvalSchoolYear();
+                if(!g||!id)throw Error('Vui lòng chọn đúng khối và môn trước khi nhập KHDH.');
+                if(/\.json$/i.test(file.name)){
+                    if(file.size>12*1024*1024)throw Error('JSON quá 12 MB.');
+                    let data;try{data=JSON.parse((await file.text()).replace(/^\uFEFF/,''));}
+                    catch{throw Error('Không thể đọc file JSON. Dữ liệu KHDH cũ không thay đổi.');}
+                    // Exactly the SAME validator and persistence service as the regular-evaluation page.
+                    const result=KHDHJson.validateKHDHJson(data,{schoolYear:year,grade:g,subjects:REGULAR_EVAL_SUBJECTS,source:file.name});
+                    const saved=await regularEvalPersistKHDHRecords(result.records,file.name);
+                    return {...saved,warnings:result.warnings||[]};
+                }
+                if(!/\.(xlsx|xls|doc|docx|pdf)$/i.test(file.name))throw Error('Chỉ hỗ trợ JSON, PDF, Word và Excel.');
+                const extracted=await regularEvalExtractKHDHSource(file);
+                const ctx={schoolYear:year,grade:g,subjectId:id,subjects:REGULAR_EVAL_SUBJECTS,source:file.name};
+                let records=[...(extracted.directRecords||[])];
+                if(!records.length && extracted.text?.trim())records.push(...KHDHStructured.rowsToRecords(extracted.text.split('\n').map(line=>line.split('|')),ctx));
+                const warnings=[];
+                // Files without structured columns may need Gemini; still use the existing AI KHDH parser.
+                if(!records.length && extracted.text?.trim()){
+                    if(!getGameGeminiApiKey())throw Error('File chưa có cấu trúc đọc được. Hãy cấu hình Gemini hoặc dùng JSON KHDH.');
+                    const chunks=regularEvalKhdhChunks(extracted.text);
+                    for(const chunk of chunks){
+                        try{
+                            const out=await callGameGeminiApi({action:'regular-evaluation-khdh',prompt:`Trích xuất chính xác danh sách bài học, chủ đề, số tiết, tuần, ngày từ tài liệu KHDH khối ${g}, môn ${subject}. Trả JSON có records; tuyệt đối không bịa dữ liệu.`,documentText:chunk});
+                            for(const raw of regularEvalParseKhdhJSON(out?.text)){
+                                const item=KHDHStructured.normalizeRecord(raw,ctx);
+                                if(item)records.push(item);
+                            }
+                        }catch(error){warnings.push('Có một phần tài liệu chưa trích xuất được: '+error.message);}
+                    }
+                }
+                if((extracted.scannedPages||[]).length){
+                    const key=getGameGeminiApiKey();
+                    if(!key)throw Error('PDF scan cần cấu hình Gemini API để đọc trang ảnh.');
+                    for(const page of extracted.scannedPages){
+                        try{
+                            const prompt=`Đọc trang PDF KHDH khối ${g} môn ${subject}; trả JSON records gồm topic, lessonName, periods, weekStart, weekEnd và focus. Không bịa.`;
+                            const out=await callGeminiDirectFallback({action:'regular-evaluation-khdh',prompt,parts:[{inlineData:{mimeType:'image/jpeg',data:page.image}},{text:prompt}]},key);
+                            for(const raw of regularEvalParseKhdhJSON(out?.text)){
+                                const item=KHDHStructured.normalizeRecord(raw,ctx);if(item)records.push(item);
+                            }
+                        }catch(error){warnings.push(`Trang PDF ${page.page} chưa đọc được`);}
+                    }
+                }
+                records=KHDHStructured.mergeUnique(records.filter(x=>x&&x.subjectId&&x.grade));
+                if(!records.length)throw Error('Không xác định được bài học KHDH; dữ liệu cũ không thay đổi.');
+                const saved=await regularEvalPersistKHDHRecords(records,file.name,warnings.length>0);
+                return {...saved,warnings};
+            }
+        };
+
         function regularEvalEnsureXLSX(){if(window.XLSX)return Promise.resolve(window.XLSX);return regularEvalLoadScript('https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js','XLSX');}
         function regularEvalHeaders(){return {row1:['STT','Mã định danh Bộ GD&ĐT','Họ và tên','Ngày sinh','Giới tính','Tổ','Tháng','Môn học và hoạt động giáo dục','','Nhận xét năng lực chung','','Nhận xét năng lực đặc thù','','Nhận xét phẩm chất chủ yếu',''],row2:['','','','','','','','Mã nhận xét','Nội dung','Mã nhận xét','Nội dung','Mã nhận xét','Nội dung','Mã nhận xét','Nội dung']};}
         function regularEvalExportHeaders(){const h=regularEvalTemplateHeaders();return {...h,row2:h.row2.map(value=>value.startsWith('Mã nhận xét')?'Mã nhận xét':value)};}
