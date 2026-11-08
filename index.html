@@ -2058,9 +2058,31 @@
             return n>=9?'T':n>=5?'D':'C';
         }
         function normalizeClassCode(className){
-            return String(className??'').trim().replace(/^\s*lớp\s*/i,'')
-                .replace(/^\s*lop\s*/i,'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-                .replace(/[đĐ]/g,'D').replace(/[^a-zA-Z0-9]/g,'').toUpperCase();
+            // Chuẩn hóa mã lớp, tránh đưa các tiền tố "Lớp"/"Class" và khoảng trắng vào mã.
+            const clean=String(className??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+                .replace(/[đĐ]/g,'D').trim().toUpperCase();
+            const withoutPrefix=clean.replace(/^\s*(?:LOP|CLASS)\s*[:\-]?\s*/,'');
+            const gradeClass=withoutPrefix.match(/^([1-5]\s*[A-Z]\s*\d{0,2})(?=$|[^A-Z0-9])/);
+            return (gradeClass?gradeClass[1]:withoutPrefix).replace(/[^A-Z0-9]/g,'');
+        }
+        function regularEvalUsableClassCode(className){
+            const code=normalizeClassCode(className);
+            // Mã CSDL cần tên lớp thực tế như 3B/2A1; không dùng "Khối 3" hoặc "Lớp học".
+            return /^[1-5][A-Z]\d{0,2}$/.test(code)?code:'';
+        }
+        function regularEvalResolveExportClassName(className,students=[]){
+            // Cấu hình lớp đã chọn luôn được ưu tiên; không ghi đè tên lớp trong state.
+            if(regularEvalUsableClassCode(className))return String(className).trim();
+            const rosterNames=students.flatMap(s=>[s.source?.className,s.source?.class,s.source?.lop,s.className])
+                .map(v=>String(v??'').trim()).filter(v=>regularEvalUsableClassCode(v));
+            const uniqueRoster=[...new Set(rosterNames.map(normalizeClassCode))];
+            if(uniqueRoster.length===1)return rosterNames.find(c=>normalizeClassCode(c)===uniqueRoster[0]);
+            const configured=[state.admin?.className,state.settings?.className,state.className]
+                .map(v=>String(v??'').trim()).filter(v=>regularEvalUsableClassCode(v));
+            const uniqueConfigured=[...new Set(configured.map(normalizeClassCode))];
+            if(uniqueConfigured.length===1)return configured.find(c=>normalizeClassCode(c)===uniqueConfigured[0]);
+            // Nếu thiếu hoặc có nhiều lớp, không phỏng đoán mã lớp.
+            throw new Error('Chưa xác định được Tên lớp để sinh Mã nhận xét. Hãy chọn/lưu Tên lớp thực tế (ví dụ 3B) trong thanh cấu hình Nhập đánh giá thường xuyên rồi xuất lại.');
         }
         function regularEvalExportMonth(month){
             if(typeof month==='number')return Number.isInteger(month)?month:NaN;
@@ -2080,14 +2102,25 @@
                 regularEvalSheetKey(sub.name)===key || regularEvalSheetKey(sub.sheetName)===key);
             return matched?.id||aliases[key]||String(subjectId||'');
         }
+        function regularEvalExportCodeProblems({type,subjectId,month,score,className,studentOrder,studentIndex}){
+            const problems=[];
+            if(!['MON_HOC','NLC','NLDT','PCCY'].includes(type))problems.push('loại nhận xét');
+            if(!REGULAR_EVAL_SUBJECT_CODE[regularEvalExportSubjectId(subjectId)])problems.push(`mã môn (${String(subjectId)})`);
+            const period=regularEvalExportMonth(month);
+            if(!Number.isInteger(period)||period<1||period>12)problems.push(`tháng (${String(month)})`);
+            if(!regularEvalUsableClassCode(className))problems.push(`tên lớp (${String(className||'trống')})`);
+            const order=Number(studentOrder??studentIndex);
+            if(!Number.isInteger(order)||order<1)problems.push(`STT (${String(studentOrder??studentIndex)})`);
+            if(!scoreToExportCode(score))problems.push(`điểm (${String(score)})`);
+            return problems;
+        }
         function generateEvaluationExportCode({type,subjectId,month,score,className,studentOrder,studentIndex}){
+            const args={type,subjectId,month,score,className,studentOrder,studentIndex};
+            if(regularEvalExportCodeProblems(args).length)return '';
             const prefixes={MON_HOC:'TX',NLC:'TXNLC',NLDT:'TXNLDT',PCCY:'TXPCCY'};
-            const prefix=prefixes[type],subject=REGULAR_EVAL_SUBJECT_CODE[regularEvalExportSubjectId(subjectId)];
-            const period=regularEvalExportMonth(month),index=Number(studentOrder??studentIndex),klass=normalizeClassCode(className);
-            const level=scoreToExportCode(score);
-            if(!prefix||!subject||!level||!klass||!Number.isInteger(period)||period<1||period>12||
-               !Number.isInteger(index)||index<1)return '';
-            return `${prefix}${subject}T${period}${level}${klass}${index}`.replace(/\s+/g,'');
+            const subject=REGULAR_EVAL_SUBJECT_CODE[regularEvalExportSubjectId(subjectId)];
+            const period=regularEvalExportMonth(month),index=Number(studentOrder??studentIndex);
+            return `${prefixes[type]}${subject}T${period}${scoreToExportCode(score)}${regularEvalUsableClassCode(className)}${index}`;
         }
         window.scoreToExportCode=scoreToExportCode;
         window.scoreToEvaluationCode=scoreToExportCode; // backward-compatible alias, only for export
@@ -3525,7 +3558,7 @@ Trong KHDH của phân môn Tin học/Công nghệ hoặc Âm nhạc/Mĩ thuật
             const students=options.students||regularEvalStudents();
             const month=regularEvalExportMonth(options.month??r.settings.month);
             const schoolYear=String(options.schoolYear||regularEvalSchoolYear());
-            const className=String(options.className??r.settings.className??'').trim();
+            const className=regularEvalResolveExportClassName(options.className??r.settings.className,students);
             if(!Number.isInteger(month)||month<1||month>12)throw new Error('Tháng xuất đánh giá không hợp lệ.');
             const subjectIds=options.subjectId?[regularEvalExportSubjectId(options.subjectId)]:REGULAR_EVAL_SUBJECTS.map(subject=>subject.id);
             const knownIds=new Set(), warnings=[],rows=[],includedSubjects=[];
@@ -3559,11 +3592,14 @@ Trong KHDH của phân môn Tin học/Công nghệ hoặc Âm nhạc/Mĩ thuật
                     for(const group of REGULAR_EVAL_EXPORT_FIELDS){
                         const score=regularEvalExportScore(ev,group.type);
                         const comment=String(ev?.[group.commentField]??'').trim();
-                        const code=generateEvaluationExportCode({type:group.type,subjectId:subject.id,
-                            month,score,className,studentOrder});
+                        const codeArgs={type:group.type,subjectId:subject.id,month,score,className,studentOrder};
+                        const code=generateEvaluationExportCode(codeArgs);
                         out[group.codeField]=code;out[group.outComment]=comment;
                         out[group.type+'Score']=score;
-                        if(score!==null&&!code)warnings.push(`Không thể tạo Mã nhận xét cho: HS ${student.name||studentOrder} (STT ${studentOrder}), môn ${subject.name}, loại ${group.label}, điểm ${score}.`);
+                        if(score!==null&&!code){
+                            const problems=regularEvalExportCodeProblems(codeArgs).join(', ')||'lỗi chưa xác định';
+                            warnings.push(`Không thể tạo Mã nhận xét cho: HS ${student.name||studentOrder} (STT ${studentOrder}), môn ${subject.name}, loại ${group.label}, điểm ${score}. Thành phần cần kiểm tra: ${problems}.`);
+                        }
                         if(score===null||!comment)warnings.push(`Thiếu ${score===null?'điểm':'nội dung'}: ${subject.name}, HS STT ${studentOrder}, ${group.label}`);
                         if(comment.length>250)warnings.push(`Nhận xét vượt 250 ký tự: ${subject.name}, HS STT ${studentOrder}, ${group.label}`);
                     }
@@ -3610,7 +3646,7 @@ Trong KHDH của phân môn Tin học/Công nghệ hoặc Âm nhạc/Mĩ thuật
                 const view=regularEvalSyncDeclaration();
                 if(!view.rows.length)return showToast('Chưa có môn nào có nội dung nhận xét trong tháng đang chọn.','error');
                 const codeErrors=view.warnings.filter(w=>w.startsWith('Không thể tạo Mã'));
-                if(codeErrors.length)throw new Error(codeErrors.slice(0,6).join('\n'));
+                if(codeErrors.length){console.error('Chi tiết lỗi Mã nhận xét:',codeErrors);throw new Error(codeErrors[0]+(codeErrors.length>1?` (và ${codeErrors.length-1} mục tương tự)`:''));}
                 const longComments=view.records.filter(rec=>rec.comment.length>250);
                 if(longComments.length){
                     alert(`${longComments.length} nhận xét vượt 250 ký tự. Hãy sửa trước khi xuất.\n`+
@@ -3672,7 +3708,7 @@ Trong KHDH của phân môn Tin học/Công nghệ hoặc Âm nhạc/Mĩ thuật
                 const dataset=buildEvaluationExportRows();
                 if(!dataset.subjects.length)return showToast('Chưa có môn nào có nội dung nhận xét trong tháng đã chọn để xuất Excel.','error');
                 const hardErrors=dataset.warnings.filter(w=>w.startsWith('Không thể tạo Mã')||w.startsWith('Nhận xét vượt'));
-                if(hardErrors.length)throw new Error(hardErrors.slice(0,6).join('\n'));
+                if(hardErrors.length){console.error('Chi tiết lỗi xuất Excel:',hardErrors);throw new Error(hardErrors[0]+(hardErrors.length>1?` (và ${hardErrors.length-1} mục tương tự)`:''));}
                 const XLSX=await regularEvalEnsureXLSX(),wb=XLSX.utils.book_new(),h=regularEvalExportHeaders();
                 for(const subject of dataset.subjects){
                     const subjectRows=dataset.rows.filter(row=>row.subjectId===subject.id);
