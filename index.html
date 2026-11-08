@@ -2052,28 +2052,30 @@
             ngoaingu:'NN',amnhac:'AN',mithuat:'MT',hdtg:'HDTN',gdtc:'GDTC',
             tinhoc:'TH',congnghe:'CN',daoduc:'DD'
         });
-        function scoreToEvaluationCode(score){
+        function scoreToExportCode(score){
             let n;try{n=normalizeEvaluationScore(score);}catch{return '';}
             if(n===null)return '';
-            return n>=7?'T':n>=5?'D':'C';
+            return n>=9?'T':n>=5?'D':'C';
         }
         function normalizeClassCode(className){
             return String(className??'').trim().replace(/^\s*lớp\s*/i,'')
                 .replace(/^\s*lop\s*/i,'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
                 .replace(/[đĐ]/g,'D').replace(/[^a-zA-Z0-9]/g,'').toUpperCase();
         }
-        function generateEvaluationCode({type,subjectId,month,score,className,studentIndex}){
+        function generateEvaluationExportCode({type,subjectId,month,score,className,studentOrder,studentIndex}){
             const prefixes={MON_HOC:'TX',NLC:'TXNLC',NLDT:'TXNLDT',PCCY:'TXPCCY'};
             const prefix=prefixes[type],subject=REGULAR_EVAL_SUBJECT_CODE[subjectId];
-            const period=Number(month),index=Number(studentIndex),klass=normalizeClassCode(className);
-            const level=scoreToEvaluationCode(score);
+            const period=Number(month),index=Number(studentOrder??studentIndex),klass=normalizeClassCode(className);
+            const level=scoreToExportCode(score);
             if(!prefix||!subject||!level||!klass||!Number.isInteger(period)||period<1||period>12||
                !Number.isInteger(index)||index<1)return '';
-            return `${prefix}${subject}T${period}${level}${klass}${index}`;
+            return `${prefix}${subject}T${period}${level}${klass}${index}`.replace(/\s+/g,'');
         }
-        window.scoreToEvaluationCode=scoreToEvaluationCode;
+        window.scoreToExportCode=scoreToExportCode;
+        window.scoreToEvaluationCode=scoreToExportCode; // backward-compatible alias, only for export
         window.normalizeClassCode=normalizeClassCode;
-        window.generateEvaluationCode=generateEvaluationCode;
+        window.generateEvaluationExportCode=generateEvaluationExportCode;
+        window.generateEvaluationCode=generateEvaluationExportCode;
         const REGULAR_EVAL_MONTHS = [8,9,10,11,12,1,2,3,4,5];
         const REGULAR_EVAL_LEVELS = [2,3,4,5,6,7,8,9,10];
         const REGULAR_EVAL_EMPTY_LEVEL = null;
@@ -2373,9 +2375,17 @@
             const norm=x=>({noiDung:String(x?.noiDung??'').trim()});
             return {monHoc:norm(obj.monHoc),nangLucChung:norm(obj.nangLucChung),nangLucDacThu:norm(obj.nangLucDacThu),phamChat:norm(obj.phamChat)};
         }
+        // File nhận xét tham khảo KHÔNG được nhập hay lưu vào ngân hàng câu.
+        // Chỉ dùng một hướng dẫn văn phong tổng quát, không lưu trữ câu mẫu.
+        const COMMENT_STYLE_GUIDE = Object.freeze({
+            tone:'khách quan, nhẹ nhàng, khích lệ',
+            structure:'kiến thức/kỹ năng đã đạt -> kiến thức/kỹ năng cần duy trì hoặc củng cố',
+            specific:true, maxLength:250, noPronouns:true, noExamples:true
+        });
+        window.COMMENT_STYLE_GUIDE=COMMENT_STYLE_GUIDE;
         const REGULAR_EVAL_SYSTEM_PROMPT=`Bạn là trợ lý hỗ trợ giáo viên tiểu học Việt Nam viết nhận xét đánh giá thường xuyên. CHỈ trả JSON đúng schema.
 MỤC TIÊU MỖI NHẬN XÉT: rõ ý, khách quan, ngắn gọn (TỐI ĐA 250 KÝ TỰ, có thể đúng 250), tự nhiên, nhẹ nhàng, tích cực. Mỗi nhận xét gồm HAI VẾ LIÊN KẾT: (1) nêu cụ thể điều đã làm được hoặc bước đầu làm được trong KHDH; (2) góp ý một việc cần rèn thêm hoặc khuyến khích duy trì/phát huy có gắn với chính kỹ năng đó. Ngăn cách tự nhiên bằng dấu chấm phẩy, chẳng hạn “...; tuy nhiên, cần ...” hoặc “...; tiếp tục ...”. Không ghép quá nhiều ý.
-MẪU CÁCH VIẾT (chỉ dùng khi KHDH thực tế có nội dung tương ứng): “Rút ra được bài học về thái độ trân trọng người lao động; tuy nhiên, cần mạnh dạn hơn khi bày tỏ suy nghĩ về vai trò của người lao động.” Không dùng cụm thừa “Biết rút ra được”; không sao chép ví dụ khi KHDH khác.
+PHONG CÁCH: Dùng khẳng định kỹ năng cụ thể rồi nêu định hướng duy trì/củng cố cùng kỹ năng. Không sao chép bất kỳ ví dụ/câu có sẵn nào, không dùng ngân hàng nhận xét.
 QUY TẮC GÓP Ý THEO ĐIỂM: Điểm 2–8: sau vế ghi nhận, nêu việc cần tiếp tục rèn hoặc củng cố có liên hệ đúng nội dung đang học; có thể mở vế sau bằng “Tuy nhiên, cần ...”. Điểm 9–10: sau vế ghi nhận, khuyến khích “tiếp tục duy trì”, “tiếp tục phát huy” một kỹ năng cụ thể; không bịa ra hạn chế để ép sử dụng “tuy nhiên”. Tuyệt đối không tự suy diễn lỗi/hành vi riêng của học sinh khi chỉ có điểm số, mà viết định hướng rèn luyện phù hợp KHDH.
 BÁM KHDH: phải sử dụng chủ đề, tên bài và trọng tâm kiến thức/kỹ năng của CHÍNH MÔN, KHỐI, THÁNG đang chọn. Nếu KHDH nêu "bảng nhân 3, 4" thì nhận xét phải chỉ rõ "bảng nhân 3, 4"/phép nhân tương ứng; không chỉ nói "học tập tốt". KHÔNG lấy nội dung tháng khác, không tự bịa bài/kỹ năng/biểu hiện chưa được cung cấp. Nếu không có KHDH tháng thì diễn đạt thận trọng, không bịa nội dung chuyên biệt.
 DIỄN ĐẠT THEO ĐIỂM RIÊNG TỪNG NHÓM (thang x/10): 9–10 thực hiện chắc, chính xác, linh hoạt (10 hơn 9); 7–8 thực hiện tốt, cần duy trì (8 hơn 7); 5–6 đã thực hiện được yêu cầu cơ bản, cần rèn thêm (6 hơn 5); 2–4 mới bước đầu thực hiện được một phần, khích lệ luyện tập thêm (4 hơn 2). KHÔNG khẳng định thành thạo hay hoàn thành hết nếu điểm thấp. Mỗi nhóm một điểm, mỗi nhóm một câu khác nhau; Năng lực chung/đặc thù, phẩm chất gắn với hành động cụ thể trong hoạt động học theo KHDH. TUYỆT ĐỐI KHÔNG trùng hoặc chỉ thay 1-2 từ giữa bốn nhóm hay giữa học sinh; thay đổi trọng tâm kỹ năng/diễn đạt trong phạm vi các bài đã học, không thêm nội dung ngoài KHDH.
@@ -2586,11 +2596,97 @@ Nếu nhóm Không chọn thì noiDung rỗng, không tự đoán điểm. Trư�
                 });
             });
         }
+        // Lịch sử chỉ gửi nội dung khi không lộ tên riêng của học sinh.
+        function regularEvalSafePreviousText(value,student){
+            const text=String(value||'').trim().slice(0,360),name=String(student?.name||'').trim();
+            if(!text||!name)return text;
+            const nameParts=name.split(/\s+/).filter(part=>part.length>=3);
+            if(nameParts.some(part=>new RegExp(`(?<![\\p{L}\\p{N}])${regularEvalEscapeRegExp(part)}(?![\\p{L}\\p{N}])`,'iu').test(text)))return '';
+            return text;
+        }
+        // KHDH tháng chỉ lập một context ngắn; cache theo năm/khối/môn/tháng và phiên bản dữ liệu.
+        let regularEvalMonthlyContextCache=null;
+        function regularEvalCompactKhdhContext(){
+            const r=regularEvalState(),year=regularEvalSchoolYear(),subjectId=r.settings.subjectId;
+            const cacheKey=`${year}|${r.settings.grade}|${subjectId}|${r.settings.month}`;
+            const doc=r.khdhDocuments?.[regularEvalKhdhDocumentKey()];
+            const legacy=doc?'':String(r.khdhMap?.[regularEvalKhdhKey()]||'');
+            const weekOne=regularEvalKhdhWeekOne();
+            if(regularEvalMonthlyContextCache?.key===cacheKey &&
+               regularEvalMonthlyContextCache?.records===doc?.records &&
+               regularEvalMonthlyContextCache?.legacy===legacy &&
+               regularEvalMonthlyContextCache?.weekOne===weekOne)return regularEvalMonthlyContextCache.value;
+            const view=doc?regularEvalKhdhView():null;
+            const topics=(view?.topics||[]).map(topic=>({
+                topic:String(topic.name||topic.topicName||'').trim(),
+                lessons:(topic.lessons||[]).map(lesson=>({
+                    lessonName:String(lesson.lessonName||lesson.name||'').trim(),
+                    keyKnowledge:String(lesson.focus||lesson.keyKnowledge||lesson.expectedSkills||'').trim().slice(0,130),
+                    weekStart:lesson.weekStart??null, weekEnd:lesson.weekEnd??null
+                }))
+            })).filter(topic=>topic.lessons.length);
+            const lines=topics.flatMap(topic=>[topic.topic,...topic.lessons.map(l=>
+                `${l.lessonName}${l.keyKnowledge?' — '+l.keyKnowledge:''}${l.weekStart?' (tuần '+l.weekStart+(l.weekEnd&&l.weekEnd!==l.weekStart?'-'+l.weekEnd:'')+')':''}`)]);
+            // Rút gọn theo tên bài nhưng không đưa kiến thức từ môn/tháng khác.
+            const compact=doc?lines.filter(Boolean).join('\n').slice(0,7800):legacy.trim().slice(0,7800);
+            const value={schoolYear:year,grade:Number(r.settings.grade),subjectId,month:Number(r.settings.month),
+                topics:topics.map(t=>t.topic),lessons:topics.flatMap(t=>t.lessons.map(l=>l.lessonName)),
+                keyKnowledge:topics.flatMap(t=>t.lessons.map(l=>l.keyKnowledge)).filter(Boolean),
+                expectedSkills:topics.flatMap(t=>t.lessons.map(l=>l.keyKnowledge)).filter(Boolean),
+                context:compact};
+            regularEvalMonthlyContextCache={key:cacheKey,records:doc?.records,legacy,weekOne,value};
+            return value;
+        }
+        function regularEvalBatchSchema(){return {type:'ARRAY',items:{type:'OBJECT',properties:{
+            studentId:{type:'STRING'},monHoc:{type:'STRING'},nlc:{type:'STRING'},nldt:{type:'STRING'},pccy:{type:'STRING'}
+        },required:['studentId','monHoc','nlc','nldt','pccy']}};}
+        function buildRegularEvaluationBatchGeminiBody(payload){
+            return {contents:[{parts:[{text:String(payload.prompt||'')}]}],systemInstruction:{parts:[{text:REGULAR_EVAL_SYSTEM_PROMPT}]},
+                generationConfig:{responseMimeType:'application/json',responseJsonSchema:regularEvalBatchSchema(),maxOutputTokens:8500,
+                thinkingConfig:{thinkingLevel:getGameGeminiModel()==='gemini-3.7-flash'?'low':'minimal'}}};
+        }
+        // Chỉ truyền ID nội bộ, điểm của từng nhóm và nhận xét tháng trước; không gửi tên học sinh.
+        function regularEvalBuildBatchPrompt(items,shared){
+            const r=regularEvalState(),prior=regularEvalPreviousMonth(r.settings.month);
+            const students=items.map(({student,levels,groupKeys})=>{
+                const old=prior===null?null:regularEvalGetEvaluation(student.id,prior,r.settings.subjectId);
+                const prev=regularEvalResolveLevels(old);
+                return {studentId:String(student.id),need:groupKeys,
+                    scores:Object.fromEntries(REGULAR_EVAL_GROUPS.map(g=>[g.key,levels[g.key]===null?null:regularEvalScoreLabel(levels[g.key])])),
+                    previousScores:Object.fromEntries(REGULAR_EVAL_GROUPS.map(g=>[g.key,prev[g.key]===null?null:regularEvalScoreLabel(prev[g.key])])),
+                    previousComments:Object.fromEntries(REGULAR_EVAL_GROUPS.map(g=>[g.key,regularEvalSafePreviousText(old?.[g.textField],student).slice(0,260)]))};
+            });
+            return `NHẬN XÉT THƯỜNG XUYÊN THEO NHÓM. KHỐI ${shared.grade}; MÔN ${regularEvalSubject().name}; THÁNG ${shared.month}; NĂM HỌC ${shared.schoolYear}.\n`+
+                `KHDH THÁNG (CHỈ CÁC BÀI ĐANG HỌC):\n${shared.context}\n`+
+                `HƯỚNG DẪN VĂN PHONG (KHÔNG CÓ CÂU MẪU): ${JSON.stringify(COMMENT_STYLE_GUIDE)}\n`+
+                `HỌC SINH VÀ CÁC NHÓM CẦN VIẾT (điểm mỗi nhóm riêng): ${JSON.stringify(students)}\n`+
+                'Trả JSON ARRAY, đúng mỗi studentId đầu vào một object {studentId,monHoc,nlc,nldt,pccy}; mỗi field chứa CÂU NHẬN XÉT THUẦN VĂN BẢN (không bọc object). '+
+                'Chỉ sinh các nhóm trong need; nhóm khác trả chuỗi rỗng. Điểm quyết định mức diễn đạt, KHDH quyết định kiến thức; '+
+                'khẳng định kỹ năng đã làm được; sau đó nêu nội dung cần duy trì/củng cố cụ thể, nối dấu chấm phẩy. '+
+                'Tối đa 250 ký tự, không xưng hô, không nhãn môn/lớp, không tiết lộ điểm/KHDH. Đa dạng nội dung giữa học sinh, không thêm bài ngoài KHDH; '+
+                'không đưa tên học sinh vào nhận xét. KHÔNG sử dụng câu nhận xét có sẵn.';
+        }
+        async function regularEvalGenerateBatch(items,shared){
+            const prompt=regularEvalBuildBatchPrompt(items,shared);
+            const raw=await callGameGeminiApi({action:'regular-evaluation-batch',prompt});
+            if(raw?.model)localStorage.setItem(GAME_GEMINI_MODEL_STORAGE,raw.model);
+            if(!Array.isArray(raw?.result))throw new Error('Gemini không trả mảng nhận xét hợp lệ');
+            const known=new Set(items.map(item=>String(item.student.id))),result=new Map();
+            for(const row of raw.result){
+                const id=String(row?.studentId??'');
+                if(!known.has(id)||result.has(id))continue;
+                result.set(id,{monHoc:{noiDung:String(row.monHoc||'')},
+                    nangLucChung:{noiDung:String(row.nlc||'')},
+                    nangLucDacThu:{noiDung:String(row.nldt||'')},
+                    phamChat:{noiDung:String(row.pccy||'')}});
+            }
+            return result;
+        }
         async function regularEvalGenerateComment(student, levels,requestedGroupKeys=null){
             if(!regularEvalKhdhContextAvailable())throw new Error(regularEvalMissingKhdhMessage());
-            const r=regularEvalState(),contextAtStart=regularEvalContextKey(),subject=regularEvalSubject(),khdh=regularEvalKhdhContext(),previousMonth=regularEvalPreviousMonth(r.settings.month);
+            const r=regularEvalState(),contextAtStart=regularEvalContextKey(),subject=regularEvalSubject(),khdh=regularEvalCompactKhdhContext().context,previousMonth=regularEvalPreviousMonth(r.settings.month);
             const previous=previousMonth===null?null:regularEvalGetEvaluation(student.id,previousMonth,r.settings.subjectId,regularEvalSchoolYear());
-            const previousText=regularEvalEvaluationText(previous),previousLevels=regularEvalResolveLevels(previous);
+            const previousText=regularEvalSafePreviousText(regularEvalEvaluationText(previous),student),previousLevels=regularEvalResolveLevels(previous);
             const variation=String(student.id).split('').reduce((a,c)=>a+c.charCodeAt(0),0)%97;
             const requested=new Set(Array.isArray(requestedGroupKeys)&&requestedGroupKeys.length?requestedGroupKeys:REGULAR_EVAL_GROUPS.map(group=>group.key));
             const accepted={},issues=[];
@@ -2599,7 +2695,7 @@ Nếu nhóm Không chọn thì noiDung rỗng, không tự đoán điểm. Trư�
                 const wanted=REGULAR_EVAL_GROUPS.filter(group=>requested.has(group.key)&&levels[group.key]!==null&&!accepted[group.key]);
                 if(!wanted.length)break;
                 const gradeFor=key=>regularEvalScoreLabel(levels[key]);
-                const prompt=`KHỐI: ${r.settings.grade}\nMÔN: ${subject.name}\nTHÁNG: ${r.settings.month}\nNĂM HỌC: ${regularEvalSchoolYear()}\nCÁC NHÓM CẦN VIẾT: ${wanted.map(group=>group.label).join('; ')}\nĐIỂM MÔN HỌC: ${gradeFor('monHoc')}\nĐIỂM NĂNG LỰC CHUNG: ${gradeFor('nangLucChung')}\nĐIỂM NĂNG LỰC ĐẶC THÙ: ${gradeFor('nangLucDacThu')}\nĐIỂM PHẨM CHẤT: ${gradeFor('phamChat')}\nBIẾN THỂ NGÔN NGỮ: ${variation}\n\nĐIỂM THÁNG TRƯỚC (nếu có): ${REGULAR_EVAL_GROUPS.map(g=>`${g.label}: ${regularEvalScoreLabel(previousLevels[g.key])}`).join('; ')}\nNHẬN XÉT THÁNG TRƯỚC: ${previousText||'Không có.'}\n\nKHDH THÁNG HIỆN TẠI (căn cứ ưu tiên):\n${khdh.trim()||'Chưa được cung cấp. Chỉ viết thận trọng dựa vào bối cảnh môn/khối, không bịa bài học cụ thể.'}\n\nViết ngắn gọn TỐI ĐA 250 ký tự theo cấu trúc HAI VẾ: trước ghi nhận một hành động/kỹ năng thực hiện được và CHI TIẾT KIẾN THỨC CỤ THỂ của KHDH THÁNG NÀY; sau dấu chấm phẩy là một góp ý cụ thể, nhẹ nhàng, hướng rèn luyện tiếp theo. Điểm 2–8 có thể viết “; tuy nhiên, cần ...”; điểm 9–10 viết “; tiếp tục duy trì/phát huy ...”, không bịa ra hạn chế. Ví dụ CÁCH DIỄN ĐẠT nếu đúng KHDH: “Rút ra được bài học về thái độ trân trọng người lao động; tuy nhiên, cần mạnh dạn hơn khi bày tỏ suy nghĩ về vai trò của người lao động.” Không áp dụng máy móc ví dụ cho môn khác. Không viết chung chung kiểu 'Có kết quả học tập tốt', 'Hoàn thành tốt nhiệm vụ học tập', 'Cần tiếp tục phát huy' mà không có nội dung cụ thể. Bốn nhóm và các học sinh phải có cách diễn đạt, chi tiết KHDH phù hợp khác nhau; KHÔNG lặp câu hoặc chỉ đổi một vài từ để né trùng, tuyệt đối không bịa kiến thức mới. Mọi nhóm khác dù có điểm vẫn trả noiDung rỗng. Trường ma để trống. Nhóm Không chọn trả noiDung rỗng. Không dùng ở BẤT KỲ vị trí nào các từ xưng hô Em, Con, Bạn, Cháu, Học sinh, Các em; không được mở đầu bằng Nắm; viết trực tiếp vào kỹ năng, giữ tên bài đúng KHDH khi phù hợp. Không viết tên học sinh. ${attempt>1?`LẦN SỬA ${attempt}: Các lời nhận xét trước vi phạm: ${issues.slice(-8).join(' | ')}. Hãy viết lại hoàn toàn, tránh các lỗi này.`:''}`;
+                const prompt=`KHỐI: ${r.settings.grade}\nMÔN: ${subject.name}\nTHÁNG: ${r.settings.month}\nNĂM HỌC: ${regularEvalSchoolYear()}\nCÁC NHÓM CẦN VIẾT: ${wanted.map(group=>group.label).join('; ')}\nHƯỚNG DẪN VĂN PHONG: ${JSON.stringify(COMMENT_STYLE_GUIDE)}\nĐIỂM MÔN HỌC: ${gradeFor('monHoc')}\nĐIỂM NĂNG LỰC CHUNG: ${gradeFor('nangLucChung')}\nĐIỂM NĂNG LỰC ĐẶC THÙ: ${gradeFor('nangLucDacThu')}\nĐIỂM PHẨM CHẤT: ${gradeFor('phamChat')}\nBIẾN THỂ NGÔN NGỮ: ${variation}\n\nĐIỂM THÁNG TRƯỚC (nếu có): ${REGULAR_EVAL_GROUPS.map(g=>`${g.label}: ${regularEvalScoreLabel(previousLevels[g.key])}`).join('; ')}\nNHẬN XÉT THÁNG TRƯỚC: ${previousText||'Không có.'}\n\nKHDH THÁNG HIỆN TẠI (căn cứ ưu tiên):\n${khdh.trim()||'Chưa được cung cấp. Chỉ viết thận trọng dựa vào bối cảnh môn/khối, không bịa bài học cụ thể.'}\n\nViết ngắn gọn TỐI ĐA 250 ký tự theo cấu trúc HAI VẾ: trước ghi nhận một hành động/kỹ năng thực hiện được và CHI TIẾT KIẾN THỨC CỤ THỂ của KHDH THÁNG NÀY; sau dấu chấm phẩy là một góp ý cụ thể, nhẹ nhàng, hướng rèn luyện tiếp theo. Điểm 2–8 có thể viết “; tuy nhiên, cần ...”; điểm 9–10 viết “; tiếp tục duy trì/phát huy ...”, không bịa ra hạn chế. Không viết chung chung kiểu 'Có kết quả học tập tốt', 'Hoàn thành tốt nhiệm vụ học tập', 'Cần tiếp tục phát huy' mà không có nội dung cụ thể. Bốn nhóm và các học sinh phải có cách diễn đạt, chi tiết KHDH phù hợp khác nhau; KHÔNG lặp câu hoặc chỉ đổi một vài từ để né trùng, tuyệt đối không bịa kiến thức mới. Mọi nhóm khác dù có điểm vẫn trả noiDung rỗng. Trường ma để trống. Nhóm Không chọn trả noiDung rỗng. Không dùng ở BẤT KỲ vị trí nào các từ xưng hô Em, Con, Bạn, Cháu, Học sinh, Các em; không được mở đầu bằng Nắm; viết trực tiếp vào kỹ năng, giữ tên bài đúng KHDH khi phù hợp. Không viết tên học sinh. ${attempt>1?`LẦN SỬA ${attempt}: Các lời nhận xét trước vi phạm: ${issues.slice(-8).join(' | ')}. Hãy viết lại hoàn toàn, tránh các lỗi này.`:''}`;
                 const raw=await callGameGeminiApi({action:'regular-evaluation-comment',prompt});
                 if(regularEvalContextKey()!==contextAtStart)throw new Error('Lớp, môn hoặc tháng đã thay đổi; không sử dụng nhận xét của ngữ cảnh cũ.');
                 if(raw?.model)localStorage.setItem(GAME_GEMINI_MODEL_STORAGE,raw.model);
@@ -2636,53 +2732,84 @@ Nếu nhóm Không chọn thì noiDung rỗng, không tự đoán điểm. Trư�
                 showToast(after.complete?'Đã tạo đủ 4 nhận xét hợp lệ theo điểm và KHDH.':`Còn mục cần viết lại: ${after.missingGroups.map(g=>g.label).join(', ')}` ,after.complete?'success':'error');
             }catch(e){regularEvalSetLoading('');console.error(e);showToast(`AI lỗi: ${e?.message||e}`,'error');}
         };
+        // AI toàn lớp: 5 học sinh/batch; tối đa 2 request đồng thời.
+        // Chỉ retry ô chưa đạt, không gọi lại toàn bộ lớp hoặc xóa nội dung hợp lệ.
         window.regularEvalGenerateBulk = async function(onlyMissing=false){
-            if(window.regularEvaluationRuntime.bulkRunning)return;
+            const rt=window.regularEvaluationRuntime;if(rt.bulkRunning)return;
             if(!regularEvalKhdhContextAvailable())return showToast(regularEvalMissingKhdhMessage(),'error');
             if(!getGameGeminiApiKey())return showToast('Chưa cấu hình Gemini API.','error');
             const students=regularEvalStudents();if(!students.length)return showToast('Danh sách học sinh đang trống.','error');
-            const firstScan=regularEvalScanCompletion(students);
-            const missingScores=firstScan.remaining.filter(item=>item.missingScoreGroups.length||regularEvalHasInvalidLevels(item.ev));
-            const initialTargets=firstScan.remaining.filter(item=>!item.ev.isLocked&&!regularEvalHasInvalidLevels(item.ev)&&item.missingGroups.length);
-            if(missingScores.length){
-                const details=missingScores.map(item=>`${item.student.name}: ${item.missingScoreGroups.map(g=>g.label).join(', ')}${regularEvalHasInvalidLevels(item.ev)?' (có điểm cũ/lỗi)':''}`).join('\n');
-                alert(`Còn ${missingScores.length} học sinh thiếu điểm. AI không tự điền điểm; các nhóm có điểm hợp lệ vẫn được xử lý.\n\n${details.slice(0,5000)}`);
+            const scan=regularEvalScanCompletion(students);
+            const invalidScores=scan.remaining.filter(item=>item.missingScoreGroups.length||regularEvalHasInvalidLevels(item.ev));
+            if(invalidScores.length){
+                alert(`Còn ${invalidScores.length} học sinh thiếu điểm/điểm lỗi. AI không đoán điểm; chỉ viết cho các nhóm đã có điểm.\n\n`+
+                    invalidScores.map(item=>`${item.student.name}: ${item.missingScoreGroups.map(g=>g.label).join(', ')}`).join('\n').slice(0,5000));
             }
-            if(!initialTargets.length){
-                window.regularEvaluationRuntime.bulkSummary={...firstScan,contextKey:regularEvalContextKey()};renderLayout();
-                return showToast(firstScan.remaining.length?`Còn ${firstScan.remaining.length} học sinh thiếu điểm, nội dung hoặc đang khóa.`:`Đã hoàn thành ${firstScan.completed}/${firstScan.total} học sinh`,firstScan.remaining.length?'error':'success');
-            }
-            if(!onlyMissing&&!confirm(`Bổ sung và kiểm tra nhận xét AI cho ${initialTargets.length} học sinh?\nKhông ghi đè lời nhận xét hợp lệ hoặc đang khóa.`))return;
-            const rt=window.regularEvaluationRuntime,bulkContext=regularEvalContextKey();rt.bulkRunning=true;rt.bulkSummary=null;
+            const queue=scan.remaining.filter(item=>!item.ev.isLocked&&!regularEvalHasInvalidLevels(item.ev)&&item.missingGroups.length);
+            if(!queue.length){rt.bulkSummary={...scan,contextKey:regularEvalContextKey()};renderLayout();return showToast('Không có mục hợp lệ nào cần AI bổ sung.',scan.remaining.length?'error':'success');}
+            if(!onlyMissing&&!confirm(`Tạo/bổ sung nhận xét cho ${queue.length} học sinh theo batch 5 học sinh/lượt?\nGiữ nguyên ô khóa và các câu hợp lệ.`))return;
+            const context=regularEvalContextKey(),shared=regularEvalCompactKhdhContext();
+            const chunks=[];for(let i=0;i<queue.length;i+=5)chunks.push(queue.slice(i,i+5).map(item=>({
+                student:item.student,levels:item.levels,groupKeys:item.missingGroups.map(g=>g.key)})));
+            rt.bulkRunning=true;rt.bulkSummary=null;
+            let processed=0;
             try{
-                for(let attempt=1;attempt<=REGULAR_EVAL_MAX_RETRIES;attempt++){
-                    if(regularEvalContextKey()!==bulkContext)break;
-                    const scan=regularEvalScanCompletion(students);
-                    const pending=scan.remaining.filter(item=>!item.ev.isLocked&&!regularEvalHasInvalidLevels(item.ev)&&item.missingGroups.length);
-                    if(!pending.length)break;
-                    for(let i=0;i<pending.length;i++){
-                        if(regularEvalContextKey()!==bulkContext)break;
-                        const item=regularEvalStudentCompletion(pending[i].student),groupKeys=item.missingGroups.map(group=>group.key);
-                        if(!groupKeys.length)continue;
-                        regularEvalSetLoading(`AI toàn lớp · lượt ${attempt}/${REGULAR_EVAL_MAX_RETRIES}\n${i+1}/${pending.length} · ${item.student.name}\nĐang xử lý ${groupKeys.length} nhóm`);
-                        try{
-                            const result=await regularEvalGenerateComment(item.student,item.levels,groupKeys);
-                            if(regularEvalContextKey()!==bulkContext)break;
-                            regularEvalApplyAiResult(item.ev,result,item.levels,item.student,groupKeys,true);
-                            await saveData();
-                        }catch(err){console.error('Lỗi tạo nhận xét:',item.student.name,err);}
-                        if(i<pending.length-1)await new Promise(resolve=>setTimeout(resolve,REGULAR_EVAL_CALL_DELAY_MS));
+                // Một đợt hai batch đồng thời, sau đó ghi tuần tự để phát hiện trùng giữa batch.
+                for(let start=0;start<chunks.length;start+=2){
+                    if(regularEvalContextKey()!==context)break;
+                    regularEvalSetLoading(`AI toàn lớp: đang tạo batch ${start+1}–${Math.min(start+2,chunks.length)}/${chunks.length}`);
+                    const pairs=await Promise.all(chunks.slice(start,start+2).map(async chunk=>{
+                        try{return {chunk,result:await regularEvalGenerateBatch(chunk,shared)};}
+                        catch(error){console.warn('Batch lỗi, sẽ thử lại từng ô:',error);return {chunk,result:new Map()};}
+                    }));
+                    if(regularEvalContextKey()!==context)break;
+                    for(const {chunk,result} of pairs){
+                        for(const item of chunk){
+                            if(regularEvalContextKey()!==context)break;
+                            const fresh=regularEvalStudentCompletion(item.student);
+                            if(fresh.ev.isLocked||regularEvalHasInvalidLevels(fresh.ev))continue;
+                            const activeKeys=fresh.missingGroups.map(g=>g.key).filter(key=>item.groupKeys.includes(key));
+                            if(!activeKeys.length)continue;
+                            const unchanged=activeKeys.filter(key=>fresh.levels[key]===item.levels[key]);
+                            if(!unchanged.length)continue;
+                            const candidate=result.get(String(item.student.id));
+                            if(candidate)regularEvalApplyAiResult(fresh.ev,candidate,fresh.levels,item.student,unchanged,true);
+                            processed++;
+                        }
                     }
-                    const after=regularEvalScanCompletion(students);
-                    if(!after.remaining.some(item=>!item.ev.isLocked&&!regularEvalHasInvalidLevels(item.ev)&&item.missingGroups.length))break;
-                    if(attempt<REGULAR_EVAL_MAX_RETRIES)await new Promise(resolve=>setTimeout(resolve,REGULAR_EVAL_RETRY_DELAY_MS));
+                    await saveData();
+                }
+                if(regularEvalContextKey()===context){
+                    const retryQueue=regularEvalScanCompletion(students).remaining.filter(item=>
+                        !item.ev.isLocked&&!regularEvalHasInvalidLevels(item.ev)&&item.missingGroups.length);
+                    // Worker pool 2: mỗi request chỉ chứa những nhóm chưa đạt của 1 HS.
+                    let cursor=0;
+                    const worker=async()=>{
+                        while(cursor<retryQueue.length&&regularEvalContextKey()===context){
+                            const item=retryQueue[cursor++],fresh=regularEvalStudentCompletion(item.student);
+                            if(fresh.ev.isLocked||!fresh.missingGroups.length)continue;
+                            regularEvalSetLoading(`Đang viết lại các câu chưa đạt: ${cursor}/${retryQueue.length}`);
+                            try{
+                                const result=await regularEvalGenerateComment(item.student,fresh.levels,fresh.missingGroups.map(g=>g.key));
+                                if(regularEvalContextKey()!==context)break;
+                                const now=regularEvalStudentCompletion(item.student);
+                                if(!now.ev.isLocked){
+                                    const keys=now.missingGroups.map(g=>g.key).filter(key=>fresh.levels[key]===now.levels[key]);
+                                    regularEvalApplyAiResult(now.ev,result,now.levels,item.student,keys,true);
+                                    await saveData();
+                                }
+                            }catch(err){console.error('Lỗi AI bổ sung:',item.student.id,err);}
+                        }
+                    };
+                    await Promise.all([worker(),worker()]);
                 }
             }finally{
                 rt.bulkRunning=false;regularEvalSetLoading('');
-                const finalScan=regularEvalScanCompletion(students);rt.bulkSummary={...finalScan,contextKey:regularEvalContextKey()};renderLayout();
-                if(regularEvalContextKey()!==bulkContext)showToast('Đã đổi lớp, môn hoặc tháng; dừng AI toàn lớp để tránh ghi nhầm nội dung.','error');
-                else if(!finalScan.remaining.length)showToast(`Đã hoàn thành: ${finalScan.completed}/${finalScan.total} học sinh`,'success');
-                else showToast(`Còn ${finalScan.remaining.length} học sinh thiếu điểm, nội dung không hợp lệ hoặc đang khóa. Xem bảng thông báo phía trên.`,'error');
+                const finalScan=regularEvalScanCompletion(students);
+                rt.bulkSummary={...finalScan,contextKey:regularEvalContextKey()};renderLayout();
+                if(regularEvalContextKey()!==context)showToast('Đã đổi lớp/môn/tháng; dừng AI để tránh ghi nhầm.','error');
+                else if(!finalScan.remaining.length)showToast(`Đã hoàn thành ${finalScan.completed}/${finalScan.total} học sinh bằng batch và kiểm tra từng câu.`,'success');
+                else showToast(`Đã xử lý ${processed} học sinh theo batch. Còn ${finalScan.remaining.length} học sinh cần kiểm tra điểm, khóa hoặc lời nhận xét.`,'error');
             }
         };
         window.regularEvalGenerateMissing=function(){return window.regularEvalGenerateBulk(true);};
@@ -3354,20 +3481,46 @@ Trong KHDH của phân môn Tin học/Công nghệ hoặc Âm nhạc/Mĩ thuật
                 const XLSX=await regularEvalEnsureXLSX(),wb=XLSX.utils.book_new(),h=regularEvalExportHeaders();
                 let missingScores=0;
                 selectedSubjects.forEach(({subject,evaluations})=>{
-                    const code=(type,score,index)=>{
-                        const result=generateEvaluationCode({type,subjectId:subject.id,month,score,className:r.settings.className,studentIndex:index+1});
+                    const code=(type,ev,index)=>{
+                        const fields={MON_HOC:['monHocScore','monHoc_ma'],NLC:['nlcScore','nlc_ma'],
+                            NLDT:['nldtScore','nldt_ma'],PCCY:['pcScore','pc_ma']};
+                        // Chỉ dùng điểm nguyên 2–10, tuyệt đối không dùng chuỗi Tốt/Đạt/Chưa đạt hay mã cũ.
+                        let score=null;
+                        for(const field of fields[type]||[]){
+                            try{const value=normalizeEvaluationScore(ev?.[field]);if(value!==null){score=value;break;}}
+                            catch{}
+                        }
+                        const result=generateEvaluationExportCode({type,subjectId:subject.id,month,score,
+                            className:r.settings.className,studentOrder:index+1});
                         if(!result)missingScores++;
                         return result;
                     };
                     const rows=[h.row1,h.row2,...students.map((student,index)=>{
                         const ev=evaluations[index];
                         return [index+1,student.code||'',student.name||'',student.dob||'',month,
-                            code('MON_HOC',ev?.monHoc_ma,index),ev?.monHoc_noiDung||'',
-                            code('NLC',ev?.nlc_ma,index),ev?.nlc_noiDung||'',
-                            code('NLDT',ev?.nldt_ma,index),ev?.nldt_noiDung||'',
-                            code('PCCY',ev?.pc_ma,index),ev?.pc_noiDung||''];
+                            code('MON_HOC',ev,index),ev?.monHoc_noiDung||'',
+                            code('NLC',ev,index),ev?.nlc_noiDung||'',
+                            code('NLDT',ev,index),ev?.nldt_noiDung||'',
+                            code('PCCY',ev,index),ev?.pc_noiDung||''];
                     })];
                     const ws=XLSX.utils.aoa_to_sheet(rows);
+                    // Mã nhận xét luôn được ghi trực tiếp vào worksheet thật (F/H/J/L),
+                    // không phụ thuộc vào trường ma cũ hoặc vào ô header đã merge.
+                    for(let rowIndex=2;rowIndex<rows.length;rowIndex++){
+                        for(const colIndex of [5,7,9,11]){
+                            const value=String(rows[rowIndex][colIndex]||'');
+                            const cell=XLSX.utils.encode_cell({r:rowIndex,c:colIndex});
+                            if(value)ws[cell]={t:'s',v:value};
+                            else delete ws[cell];
+                        }
+                    }
+                    for(let rowIndex=2;rowIndex<rows.length;rowIndex++){
+                        for(const colIndex of [5,7,9,11]){
+                            const expected=String(rows[rowIndex][colIndex]||'');
+                            const got=String(ws[XLSX.utils.encode_cell({r:rowIndex,c:colIndex})]?.v||'');
+                            if(expected!==got)throw new Error(`Lỗi ghi Mã nhận xét tại dòng ${rowIndex+1}`);
+                        }
+                    }
                     ws['!cols']=[{wch:6},{wch:24},{wch:29},{wch:16},{wch:10},{wch:24},{wch:45},{wch:28},{wch:45},{wch:28},{wch:45},{wch:28},{wch:45}];
                     ws['!merges']=[
                         ...[0,1,2,3,4].map(c=>({s:{r:0,c},e:{r:1,c}})),
@@ -3657,6 +3810,18 @@ Trong KHDH của phân môn Tin học/Công nghệ hoặc Âm nhạc/Mĩ thuật
                 return { ok: true, model, direct: true, raw: data };
             }
 
+            if (payload.action === 'regular-evaluation-batch') {
+                const response=await fetch(endpoint,{method:'POST',headers:{
+                    'Content-Type':'application/json','x-goog-api-key':apiKey},
+                    body:JSON.stringify(buildRegularEvaluationBatchGeminiBody(payload))});
+                const data=await readGameAiResponse(response);
+                const raw=data?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'';
+                let parsed;
+                try{parsed=JSON.parse(raw.replace(/```json/gi,'').replace(/```/g,'').trim());}
+                catch{throw new Error('Gemini trả JSON batch không hợp lệ');}
+                if(!Array.isArray(parsed))throw new Error('Batch không phải mảng');
+                return {ok:true,model,direct:true,result:parsed};
+            }
             if (payload.action === 'regular-evaluation-comment') {
                 const response = await fetch(endpoint, {
                     method: 'POST',
