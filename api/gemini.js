@@ -231,9 +231,8 @@ function normalizeRegularEvaluationResult(obj) {
   return { monHoc:one(obj?.monHoc), nangLucChung:one(obj?.nangLucChung), nangLucDacThu:one(obj?.nangLucDacThu), phamChat:one(obj?.phamChat) };
 }
 
-async function generateRegularEvaluation(apiKey, prompt) {
-  const system = `Bạn là trợ lý hỗ trợ giáo viên tiểu học Việt Nam viết nhận xét đánh giá thường xuyên. Chỉ xuất JSON theo schema.
-- MỖI CÂU: tối đa 250 ký tự, rõ ràng, khách quan, nhẹ nhàng, đúng ngữ pháp; viết thành HAI VẾ GẮN KẾT: vế đầu ghi nhận kỹ năng/hành động đã thực hiện được với kiến thức/bài học CỤ THỂ; sau dấu chấm phẩy, vế sau nêu hướng rèn thêm hoặc duy trì chính kỹ năng đó. Ví dụ diễn đạt khi KHDH tương ứng: “Rút ra được bài học về thái độ trân trọng người lao động; tuy nhiên, cần mạnh dạn hơn khi bày tỏ suy nghĩ về vai trò của người lao động.” Không viết dư “Biết rút ra được”, không sao chép ví dụ khi KHDH khác.
+const REGULAR_EVAL_API_SYSTEM = `Bạn là trợ lý hỗ trợ giáo viên tiểu học Việt Nam viết nhận xét đánh giá thường xuyên. Chỉ xuất JSON theo schema.
+- MỖI CÂU: tối đa 250 ký tự, rõ ràng, khách quan, nhẹ nhàng, đúng ngữ pháp; viết thành HAI VẾ GẮN KẾT: vế đầu ghi nhận kỹ năng/hành động đã thực hiện được với kiến thức/bài học CỤ THỂ; sau dấu chấm phẩy, vế sau nêu hướng rèn thêm hoặc duy trì chính kỹ năng đó. Chỉ dùng HƯỚNG DẪN VĂN PHONG tổng quát. Không sao chép câu có sẵn từ bất kỳ file tham khảo, không dùng ngân hàng nhận xét.
 - VỚI ĐIỂM 2–8: góp ý cụ thể và nhẹ nhàng ở vế sau, có thể dùng “; tuy nhiên, cần ...”. VỚI ĐIỂM 9–10: vế sau khuyến khích duy trì/phát huy kiến thức, không tự gán hạn chế hoặc bịa lỗi để ép dùng “tuy nhiên”. Điểm chỉ định hướng mức diễn đạt, không phải bằng chứng về một thiếu sót cá nhân.
 - BẮT BUỘC bám KHDH của đúng MÔN–KHỐI–THÁNG hiện tại: chủ đề, tên bài, kiến thức, kỹ năng đã dạy; không thay bằng nội dung tháng trước, không tự bịa nội dung hoặc thành tích. Ví dụ học "bảng nhân 3, 4" thì phải nêu phép/bảng nhân 3, 4, không viết chung chung "học tập tốt". Nếu thiếu KHDH, diễn đạt thận trọng, không tự xác nhận kiến thức cụ thể.
 - Từng nhóm dùng ĐIỂM RIÊNG x/10: 9–10 nổi bật/chính xác (10 hơn 9); 7–8 thực hiện tốt (8 hơn 7); 5–6 làm được yêu cầu cơ bản và cần rèn thêm (6 hơn 5); 2–4 bước đầu thực hiện một phần, cần luyện thêm (4 hơn 2), không giả định hoàn thành toàn bộ khi điểm thấp. NLC, NLĐT, Phẩm chất mô tả kỹ năng/hành động tương ứng trong hoạt động của KHDH, không viết bốn câu giống nhau.
@@ -242,7 +241,10 @@ async function generateRegularEvaluation(apiKey, prompt) {
 - Không mở đầu bằng "Nắm", "Nắm được", "Nắm vững"; ưu tiên "Đọc", "Viết", "Thực hiện", "Nhận biết", "Phân biệt", "Vận dụng", "Tính", "Giải", "Trình bày", "Xác định", "Hoàn thành", "Bước đầu".
 - CẤM câu chung chung không nói rõ học gì/làm được gì: "Hoàn thành tốt nhiệm vụ học tập", "Có kết quả học tập tốt", "Tiếp thu bài khá tốt", "Có tiến bộ trong học tập", "Thực hiện tốt các yêu cầu", "Cần tiếp tục phát huy". "Có ý thức/Có tiến bộ/Có khả năng" phải đi kèm hành động và nội dung cụ thể.
 - Không ghi tên môn/lớp/khối kiểu nhãn, điểm số, KHDH, kế hoạch dạy học, tên file hay dữ liệu kỹ thuật vào câu. Không dùng "yếu", "kém", "không biết", "không có khả năng". KHÔNG lặp câu/ý giữa bốn nhóm và học sinh, không chỉ thay 1–2 từ; đa dạng chi tiết kỹ năng và cách diễn đạt nhưng không thêm nội dung ngoài KHDH.
-- Nhóm Không chọn trả noiDung rỗng, không tự đoán điểm. ma để chuỗi rỗng vì app quản lý điểm riêng. Tự kiểm tra 250 ký tự và tính cụ thể trước khi trả JSON.`;
+- Nhóm Không chọn trả noiDung rỗng, không tự đoán điểm. ma để chuỗi rỗng vì app quản lý điểm riêng. Tự kiểm tra 250 ký tự và tính cụ thể trước khi trả JSON.`;;
+
+async function generateRegularEvaluation(apiKey, prompt) {
+  const system = REGULAR_EVAL_API_SYSTEM;
   let lastError;
   for (const model of MODEL_CANDIDATES) {
     try {
@@ -258,6 +260,38 @@ async function generateRegularEvaluation(apiKey, prompt) {
     } catch (err) { lastError=err; if(!shouldTryNextModel(err)) break; }
   }
   throw lastError || new Error('Không tạo được nhận xét.');
+}
+
+// Một lời gọi Gemini cho tối đa 8 học sinh: trả từng nhận xét riêng theo ID.
+function regularEvaluationBatchSchema(){
+  return {type:'array',items:{type:'object',properties:{
+    studentId:{type:'string'}, monHoc:{type:'string'}, nlc:{type:'string'},
+    nldt:{type:'string'}, pccy:{type:'string'}
+  },required:['studentId','monHoc','nlc','nldt','pccy'],additionalProperties:false}};
+}
+async function generateRegularEvaluationBatch(apiKey,prompt){
+  let lastError;
+  for(const model of MODEL_CANDIDATES){
+    try{
+      const data=await googleGenerate({apiKey,model,body:{
+        contents:[{parts:[{text:String(prompt||'').slice(0,55000)}]}],
+        systemInstruction:{parts:[{text:REGULAR_EVAL_API_SYSTEM}]},
+        generationConfig:{responseMimeType:'application/json',responseJsonSchema:regularEvaluationBatchSchema(),
+          maxOutputTokens:8500,thinkingConfig:{thinkingLevel:thinkingLevelFor(model)}}
+      }});
+      const raw=data?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'';
+      if(!raw)throw Object.assign(new Error('Gemini không trả mảng nhận xét.'),{contentInvalid:true});
+      let result;
+      try{result=JSON.parse(raw.replace(/```json/gi,'').replace(/```/g,'').trim());}
+      catch{throw Object.assign(new Error('Gemini trả JSON batch sai định dạng.'),{contentInvalid:true});}
+      if(!Array.isArray(result))throw Object.assign(new Error('Dữ liệu batch phải là mảng JSON.'),{contentInvalid:true});
+      return {model,result:result.slice(0,8).map(row=>({
+        studentId:String(row?.studentId??''),monHoc:String(row?.monHoc??''),
+        nlc:String(row?.nlc??''),nldt:String(row?.nldt??''),pccy:String(row?.pccy??'')
+      }))};
+    }catch(error){lastError=error;if(!shouldTryNextModel(error))break;}
+  }
+  throw lastError||new Error('Không tạo được nhận xét theo batch.');
 }
 
 async function analyzeRegularEvaluationKHDH(apiKey, { documentText, prompt }) {
@@ -287,6 +321,10 @@ export default async function handler(req, res) {
     if (action === 'validate') {
       const model = await validateApiKey(apiKey);
       return res.status(200).json({ ok: true, model });
+    }
+    if (action === 'regular-evaluation-batch') {
+      const {model,result}=await generateRegularEvaluationBatch(apiKey,body.prompt);
+      return res.status(200).json({ok:true,model,result});
     }
     if (action === 'regular-evaluation-comment') {
       const { model, result } = await generateRegularEvaluation(apiKey, body.prompt);
